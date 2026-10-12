@@ -86,6 +86,8 @@ const DEFAULT_CONFIG = {
   windowChars: DEFAULTS.windowChars,          // 搜索跑在多大的尾部窗口上
   densityLines: DEFAULTS.densityLines,        // 第二个检测器看几行
   densityRatio: DEFAULTS.densityRatio,        // 这些行里重复行要占多大比例
+  structLines: DEFAULTS.structLines,          // 第三个检测器：同骨架连续几行
+  structShare: DEFAULTS.structShare,          // 这些行里字母要占多大比例
   cancel: true,                               // false = 只报警，永不打断
   alarm: true,                                // false = 不弹卡片
   sound: true,                                // false = 卡片静音
@@ -106,6 +108,8 @@ const CONFIG_FIELDS = {
   windowChars: { kind: 'integer', min: 256, max: 1_048_576 },
   densityLines: { kind: 'integer', min: 2, max: 200 },
   densityRatio: { kind: 'number', min: 0, max: 1 },
+  structLines: { kind: 'integer', min: 0, max: 200 },
+  structShare: { kind: 'number', min: 0, max: 1 },
   cancel: { kind: 'boolean' },
   alarm: { kind: 'boolean' },
   sound: { kind: 'boolean' },
@@ -267,6 +271,8 @@ function detectorOptions(config) {
     windowChars: config.windowChars,
     densityLines: config.densityLines,
     densityRatio: config.densityRatio,
+    structLines: config.structLines,
+    structShare: config.structShare,
   }
 }
 

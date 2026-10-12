@@ -40,6 +40,8 @@ export const DEFAULTS = {
   checkEvery: 32,      // run the search at most every N appended chars
   densityLines: 8,     // lines examined by the second detector
   densityRatio: 0.75,  // share of those lines that must be duplicates
+  structLines: 12,     // consecutive lines sharing one skeleton, third detector (0 = off)
+  structShare: 0.6,    // letters / (letters + digits) across that run
 }
 
 export function createDetector(options)  // -> detector
@@ -51,9 +53,9 @@ Returns `null`, or on the first hit of a loop:
 ```js
 {
   stream: 'thinking' | 'text',
-  kind: 'cycle' | 'density',
-  unit: string,      // cycle: word-aligned; density: normalized line in original order; <= 120 chars
-  repeats: number,   // how many contiguous copies were seen (cycle) / duplicate lines (density)
+  kind: 'cycle' | 'density' | 'struct',
+  unit: string,      // cycle: word-aligned; density: normalized line in original order; struct: the run's first line; <= 120 chars
+  repeats: number,   // cycle: contiguous copies; density: duplicate lines; struct: lines in the run
   at: number,        // Date.now() at detection
 }
 ```
@@ -83,6 +85,22 @@ Rules the core guarantees (and the harness must prove):
 4. Ordering: `text` and `thinking` are independent; a loop in one does not mask the other.
 5. `snapshot()[stream].score` is clamped to `[0, 1]` and reaches exactly `1` at the hit. A loop
    that runs 400 copies does not report a score of 400.
+6. Detector order is `cycle`, then `struct`, then `density`: a verbatim loop is never reported
+   as the vaguer signal it would also match, and a counting loop outranks the line-density
+   signal it is a special case of. Only the first qualifying detector in that order is asked.
+7. The skeleton rule (`kind: 'struct'`) is about a *shape*: consecutive lines whose numbers are
+   blanked are identical, for at least `structLines` lines, and across that run at least
+   `structShare` of the letters-plus-digits are letters. It exists because a counting loop
+   (`第 1 步…`, `第 2 步…`) writes a different line every time and is invisible to both other
+   rules. `structLines: 0` turns it off; that off state is meaningful on the wire and must
+   survive decoding (a host reporting 0 must not be read back as 12).
+8. **Known limit, asserted rather than hidden.** A long honest enumeration (`port 8001 is
+   listening` × 20) fires too. It is syntactically the same thing as a counting loop — one
+   sentence, one fresh number per line, nothing saying whether it will ever stop — and the share
+   axis cannot separate them (that listing is 79% letters, the lightest real loop 67%). The
+   choice is to fire on both or neither; firing on a long enumeration costs one dismissible
+   alarm, not firing on the loop costs the turn. Callers who disagree use `structLines: 0` or a
+   higher line count.
 
 ## HTTP surface (host half)
 
@@ -111,6 +129,8 @@ Status codes: `400` bad body, `404` unknown action, `405` wrong method, `503` no
   windowChars: 8192,
   densityLines: 8,
   densityRatio: 0.75,
+  structLines: 12,        // 0 = counting-loop rule off
+  structShare: 0.6,
   cancel: true,           // false = alarm only, never interrupt
   alarm: true,            // false = no card
   sound: true,            // false = silent card
@@ -177,8 +197,8 @@ data: {"sessions":[...]}
 - Overlay: `shell.overlay`, id `loop-guard-alarm`, order `30`.
 - Alarm card: **never auto-dismisses**. It has a dismiss button and a sound. A card that
   vanished on its own would be the one alarm the user was away for.
-- The monitor tab draws: master switch, the two thresholds that matter (`minRepeat`,
-  `densityRatio`), the live session table (score bar + current unit), and the hit history.
+- The monitor tab draws: master switch, the thresholds that matter (`minRepeat`, `densityRatio`,
+  `structShare`), the live session table (score bar + current unit), and the hit history.
 - Sound is synthesised with WebAudio (no asset file). It must never throw when audio is
   unavailable — a failed beep must not cost the card.
 

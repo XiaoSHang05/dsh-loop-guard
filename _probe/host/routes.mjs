@@ -210,9 +210,9 @@ async function main() {
     check('GET state 200 with {version,config,sessions,hits}',
       state.status === 200 && value.version === 1 && Array.isArray(value.sessions) && Array.isArray(value.hits) && typeof value.config === 'object',
       state.text)
-    check('state config carries all eleven fields',
+    check('state config carries all thirteen fields',
       Object.keys(value.config).sort().join(',') ===
-        'alarm,cancel,densityLines,densityRatio,enabled,maxUnit,minRepeat,minUnit,scopeDefault,sound,windowChars',
+        'alarm,cancel,densityLines,densityRatio,enabled,maxUnit,minRepeat,minUnit,scopeDefault,sound,structLines,structShare,windowChars',
       Object.keys(value.config).join(','))
   }
 

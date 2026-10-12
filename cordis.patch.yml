@@ -42,6 +42,17 @@
         # remain different content; this is not a retry-loop classifier.
         densityLines: 8
         densityRatio: 0.75
+        # Third detector: consecutive lines that share one sentence shape once
+        # their numbers are blanked. `第 1 步：读取完成。` / `第 2 步：…` is a loop
+        # that neither rule above can see, because every line differs by a digit.
+        # The second axis is letters / (letters + digits) over the run: a loop is
+        # a sentence with a fresh number glued on (>= 60%), a table or coordinate
+        # dump is a format with numbers poured into it (34% at its most verbal in
+        # 970 MB of this machine's own output). Set structLines: 0 to switch the
+        # rule off. Known limit: a long honest enumeration (`port 8001 is
+        # listening` x20) also fires — see README 「已知边界」.
+        structLines: 12
+        structShare: 0.6
         # Cancel the turn when a loop is caught. Off makes this an alarm-only
         # build without editing any code.
         cancel: true

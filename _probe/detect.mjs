@@ -90,10 +90,79 @@ loud('a loop that starts mid-buffer is caught',
   'Here is a normal opening sentence that is not repeated at all. ' + 'and now the loop begins. '.repeat(20),
   'text', 'cycle')
 
-quiet('different numbers remain different content',
-  Array.from({ length: 40 }, (_, i) => 'Step 3: processing item ' + i).join('\n') + '\n')
-quiet('timestamped retry lines are not classified from text alone',
-  Array.from({ length: 40 }, (_, i) => 'attempt ' + i + ': connection timed out, will retry').join('\n') + '\n')
+/*
+ * The counting loop: `第 1 步…` / `第 2 步…` — every line differs by one number, so the cycle
+ * detector sees no period and the density detector sees no duplicate line. It was the one shape
+ * that could run to the token ceiling unwatched (measured: 6,692–9,492 characters emitted with
+ * the progress bar still reading 0%).
+ *
+ * These two cases used to assert the opposite, and at the time they were right: "different
+ * numbers remain different content" was an honest description of what the detector did, and the
+ * only way to keep a retry log quiet. The skeleton rule is what changed that, so the assertion
+ * changes with it — and both halves of the old claim stay pinned, because the rule can be
+ * switched off. A test that only asserted the new behaviour would have thrown away the property
+ * that made the old one worth writing.
+ */
+{
+  const steps = Array.from({ length: 40 }, (_, i) => 'Step 3: processing item ' + i).join('\n') + '\n'
+  const retries = Array.from({ length: 40 }, (_, i) =>
+    'attempt ' + i + ': connection timed out, will retry').join('\n') + '\n'
+
+  const hit = loud('a counting loop fires on the skeleton rule', steps, 'text', 'struct')
+  check('the counting loop reports its run length, not a repeat count',
+    hit !== null && hit.repeats >= 12 && hit.repeats <= 40,
+    hit === null ? undefined : 'repeats=' + hit.repeats)
+
+  loud('a retry loop with a fresh attempt number fires on the skeleton rule', retries, 'text', 'struct')
+
+  // With the rule off, the old property must still hold. That is what makes the rule above a
+  // choice rather than a correction of a bug — and it is the only reason a caller who wants a
+  // retry log left alone has a way to say so.
+  for (const [label, text] of [['step', steps], ['retry', retries]]) {
+    const off = createDetector({ structLines: 0 })
+    const quietHit = feed(off, 'text', text)
+    check('with the skeleton rule off, a counting ' + label + ' loop is not classified from text alone',
+      quietHit === null, quietHit === null ? undefined : 'fired: ' + JSON.stringify(quietHit))
+  }
+}
+
+{
+  // The measured honest ceiling: the heaviest same-skeleton run in 970 MB of this machine's own
+  // logged output is 12 lines at 34% letters. It is a listing, not a loop, and it must stay
+  // quiet — which is what fixes the share threshold. Anything at or below 34% has to pass, so
+  // 60% is a threshold with room around it rather than a number fitted to one sample.
+  //
+  // Both fixtures are 20 lines, not 12, and that is deliberate. `checkEvery` is 32 characters,
+  // so a twelve-line fixture can end between two scan points: the rule never looks at twelve
+  // lines, the case stays quiet, and it would stay quiet with the share axis deleted. A negative
+  // case that passes because the code never ran is decoration — this is the same "sample too
+  // short" mistake the stream probes made, one layer down.
+  const listing = Array.from({ length: 20 }, (_, i) =>
+    '- [' + i + '] `0' + (51 + i) + '_off' + (28215881 + i * 7) + '.bin`').join('\n') + '\n'
+  quiet('a file listing with numbers in every line is not a counting loop', listing)
+  quiet('a coordinate dump is not a counting loop',
+    Array.from({ length: 20 }, (_, i) =>
+      '7. 1300 rot90: (4146430.063,1761157.9)-(4146430.063,1760117.9), dp ' + i).join('\n') + '\n')
+
+  /*
+   * The known limit, asserted rather than hidden.
+   *
+   * `port 8001 is listening` × 20 is an honest enumeration and the rule fires on it, because it
+   * is the same text as a counting loop: one sentence, one fresh number per line, nothing in the
+   * syntax to say whether it will ever stop. The share axis cannot separate them either — this
+   * listing is 79% letters and the lightest real loop (`[N/400] 正在分析代码结构...`) is 67%, so
+   * the two ranges overlap. The only honest options are to fire on both or on neither, and firing
+   * on a long enumeration costs one dismissible alarm while not firing on the loop costs the
+   * whole turn.
+   *
+   * So this case pins the behaviour. If someone later raises the share threshold to quiet this
+   * listing, they will also have silenced the loop above, and this assertion is where that shows
+   * up. The escape hatch for a caller who disagrees is `structLines: 0` or a higher line count.
+   */
+  loud('a long verbal enumeration fires too — the documented limit, not a surprise',
+    Array.from({ length: 20 }, (_, i) => 'port ' + (8001 + i) + ' is listening').join('\n') + '\n',
+    'text', 'struct')
+}
 
 {
   const detector = createDetector({ minRepeat: 50, checkEvery: 1 })

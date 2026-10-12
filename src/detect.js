@@ -34,6 +34,8 @@ export const DEFAULTS = {
   checkEvery: 32,
   densityLines: 8,
   densityRatio: 0.75,
+  structLines: 12,
+  structShare: 0.6,
 }
 
 /** The two streams are watched independently: a loop in thinking must not hide one in text. */
@@ -128,10 +130,115 @@ function hasContent(unit) {
 
 /**
  * Normalize whitespace only. Different numbers remain different content, even in
- * otherwise identical lines; detecting counter loops would also flag ordinary data.
+ * otherwise identical lines.
+ *
+ * This is deliberate, and it is what makes a third detector necessary: a counting loop
+ * (`第 1 步：…`, `第 2 步：…`) writes a different line every time, so it is invisible both to the
+ * character cycle (the characters never repeat) and to this one (the lines never match). Making
+ * numbers equal here would fix that and break something worse — every honest table of ports,
+ * offsets or versions would collapse into one repeated line and the density detector would fire
+ * on ordinary data. The numbers are not the signal; the sentence carrying them is. That is what
+ * `skeleton` reads instead.
  */
 function normalizeLine(line) {
   return line.trim().replace(/\s+/gu, ' ')
+}
+
+/**
+ * A line with its numbers blanked: `第 1 步：读取完成。` and `第 2 步：读取完成。` share one.
+ *
+ * `#` is the placeholder because it cannot occur in the output of `replace(/\d+/gu, ...)`, so a
+ * skeleton can never collide with a real line by accident.
+ */
+function skeleton(line) {
+  return normalizeLine(line).replace(/\d+/gu, '#')
+}
+
+/**
+ * The longest run of consecutive lines at the end of `text` that share one skeleton, and how
+ * much of it is words.
+ *
+ * Two axes, because neither alone separates a runaway from honest data — this was measured
+ * against every assistant message this machine has ever logged (see `_probe/struct-*.mjs`):
+ *
+ *   lines   a 12-port listing is 12 lines; so is a 12-line loop
+ *   letters / (letters + digits)
+ *           a listing is a format with numbers poured into it (34% at its most verbal), a
+ *           counting loop is a sentence with one fresh number glued on (50% and up). This is
+ *           the statistic that actually separates them, and it is scale-free: it does not move
+ *           when the lines get longer.
+ *
+ * The heaviest honest run in 970 MB of real output is 12 lines at 34%; the honest ceiling over
+ * 8 lines is 50%. A caller passing the defaults therefore has four lines and 26 points of room,
+ * which is what makes this a threshold rather than a coincidence.
+ */
+function scanSkeleton(text, config) {
+  // `structLines: 0` turns the rule off, the way `minRepeat: 0` turns the cycle rule off. A
+  // harness that wants to argue about the other two detectors needs a way to say so, and a
+  // caller who does not want this rule should not have to pick an impossible share to express
+  // that. Returning a zero-length run also zeroes the progress bar, so "off" does not read as
+  // "one line from firing".
+  if (config.structLines <= 0) return { qualifies: false, lines: 0, share: 0, sample: '' }
+
+  const lines = text.split('\n')
+  // The final element is never a line: text ending in a newline leaves an empty one, and text
+  // cut mid-line leaves an unfinished one whose skeleton can still change. Counting either as a
+  // line would make the run count depend on where the chunk boundary fell.
+  lines.pop()
+
+  let key = null
+  let run = []
+  let best = []
+
+  const measure = (candidate) => {
+    const joined = candidate.join('\n')
+    const digits = (joined.match(/\d/gu) ?? []).length
+    const letters = (joined.match(/\p{L}/gu) ?? []).length
+    return {
+      lines: candidate.length,
+      letters,
+      digits,
+      sample: candidate[0],
+      share: letters + digits === 0 ? 0 : letters / (letters + digits),
+    }
+  }
+
+  for (const line of lines) {
+    const next = isBlank(line) ? null : skeleton(line)
+    // `hasContent` on the skeleton is what keeps a page of `-----` separators out: they share a
+    // skeleton and would otherwise be the longest run on the page.
+    if (next === null || !hasContent(next) || next.length < 4) {
+      // A blank line ends the run: the rule counts *adjacent* lines, and treating a gap as
+      // transparent would merge two unrelated blocks into one apparent loop.
+      if (run.length > best.length) best = run
+      key = null
+      run = []
+      continue
+    }
+    if (next === key) {
+      run.push(line)
+    } else {
+      if (run.length > best.length) best = run
+      key = next
+      run = [line]
+    }
+  }
+  if (run.length > best.length) best = run
+
+  // The longest run in the window, not the last one. A loop is a run that keeps growing at the
+  // end of the buffer, so the two agree while it is happening — but a blank line arriving in the
+  // same chunk as the twelfth line would otherwise reset the run before it was ever measured.
+  if (best.length < config.structLines) {
+    return { qualifies: false, lines: best.length, share: 0, sample: '' }
+  }
+
+  const found = measure(best)
+  return {
+    qualifies: found.lines >= config.structLines && found.share >= config.structShare,
+    lines: found.lines,
+    share: found.share,
+    sample: found.sample,
+  }
 }
 
 /**
@@ -255,6 +362,18 @@ export function createDetector(options) {
     const density = scanDensity(text, config)
     const ratio = density.total === 0 ? 0 : density.duplicates / density.total
 
+    // Between the cycle and the density: a counting loop is a real loop (so it outranks the
+    // fuzzy line-repetition signal) but it is not a verbatim one (so a verbatim loop, found
+    // above, must not be reported as this).
+    const struct = scanSkeleton(text, config)
+
+    if (struct.qualifies) {
+      latest[stream] = { repeats: struct.lines, unit: shorten(struct.sample), score: 1 }
+      if (latched[stream]) return null
+      latched[stream] = true
+      return { stream, kind: 'struct', unit: shorten(struct.sample), repeats: struct.lines, at: Date.now() }
+    }
+
     if (ratio >= config.densityRatio) {
       latest[stream] = { repeats: density.duplicates, unit: shorten(density.sample), score: 1 }
       if (latched[stream]) return null
@@ -265,7 +384,26 @@ export function createDetector(options) {
     // Neither detector fired. The bar shows whichever signal is closer to its own threshold:
     // a counting loop is the closest thing to a hit the cycle detector can see, and reporting
     // its near-zero repeat count would draw an empty bar over a loop one line from alarming.
-    if (ratio >= cycleScore) {
+    // The skeleton rule needs both of its axes at once, so its progress is the weaker of the
+    // two — a run with the lines but not the words is not most of the way to an alarm.
+    // A switched-off rule must not drive the bar either: `structLines: 0` means the caller does
+    // not want this signal, so its progress is zero rather than "one line from firing".
+    const structScore = config.structLines <= 0
+      ? 0
+      : Math.min(
+        struct.lines / config.structLines,
+        config.structShare === 0 ? 1 : struct.share / config.structShare,
+        1,
+      )
+
+    // Progress is only reported from a run of two or more lines. A run of one is not a
+    // repetition — every single line is a run of one — so reading the bar from it would park
+    // every idle session at 1/structLines and put `repeats: 1` on the wire for prose that
+    // repeats nothing. Two adjacent lines sharing a skeleton is the first moment there is
+    // anything to show.
+    if (struct.lines >= 2 && structScore >= ratio && structScore >= cycleScore) {
+      latest[stream] = { repeats: struct.lines, unit: '', score: structScore }
+    } else if (ratio >= cycleScore) {
       latest[stream] = { repeats: density.duplicates, unit: '', score: Math.min(ratio, 1) }
     } else {
       latest[stream] = { repeats: cycle.repeats, unit: '', score: cycleScore }

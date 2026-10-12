@@ -1,9 +1,8 @@
 {
   "name": "dsh-loop-guard",
-  "version": "0.1.1",
-  "private": true,
+  "version": "0.2.0",
   "type": "module",
-  "description": "Repeat-output guard for DSH: watches the live assistant stream (thinking and text), detects verbatim repetition, raises a manual-dismiss alarm, and cancels the runaway turn.",
+  "description": "Repeat-output guard for DSH: watches the live assistant stream (thinking and text), catches verbatim loops and counting loops that differ only by a number, raises a manual-dismiss alarm, and cancels the runaway turn.",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -11,9 +10,19 @@
     "loop-guard",
     "repetition",
     "degeneration",
-    "watchdog"
+    "watchdog",
+    "runaway"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XiaoSHang05/dsh-loop-guard.git"
+  },
+  "homepage": "https://github.com/XiaoSHang05/dsh-loop-guard#readme",
+  "bugs": {
+    "url": "https://github.com/XiaoSHang05/dsh-loop-guard/issues"
+  },
+  "author": "XiaoSHang05",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",

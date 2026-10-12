@@ -115,12 +115,10 @@ console.log(`\n${'═'.repeat(112)}`)
 console.log('★ 各格子对真循环的延迟（行/字）；「漏」= 那个形状达不到该格的字母要求')
 console.log(`${'═'.repeat(112)}`)
 const CELLS = [
-  { L: 20, kind: 'letters', v: 6 },
-  { L: 20, kind: 'letters', v: 8 },
-  { L: 20, kind: 'ratio', v: 40 },
-  { L: 20, kind: 'ratio', v: 50 },
-  { L: 24, kind: 'ratio', v: 50 },
-  { L: 30, kind: 'ratio', v: 50 },
+  { L: 12, kind: 'ratio', v: 50 },
+  { L: 12, kind: 'ratio', v: 60 },
+  { L: 12, kind: 'ratio', v: 70 },
+  { L: 14, kind: 'ratio', v: 60 },
 ]
 process.stdout.write(`${'形状'.padEnd(30)}`)
 for (const c of CELLS) process.stdout.write(`${`${c.L}行/${c.kind === 'letters' ? c.v + 'L' : c.v + '%'}`.padStart(14)}`)

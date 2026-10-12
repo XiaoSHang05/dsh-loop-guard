@@ -198,7 +198,10 @@ async function main() {
   // `_probe/env.mjs` is the one file allowed to know where this machine keeps things; it is
   // also the one file a reader is expected to edit. Anywhere else, an absolute path is a
   // reproducible-build bug: the file only works on the machine that wrote it.
-  const needles = [homedir(), root, `app${'.asar'}`]
+  // Both separator forms, because Windows hands back backslashes while a path written by hand
+  // is usually typed with forward slashes. Checking only the native form means the check passes
+  // on exactly the spelling nobody uses.
+  const needles = [homedir(), homedir().split(sep).join('/'), root, root.split(sep).join('/'), `app${'.asar'}`]
   const allowed = join(root, '_probe', 'env.mjs')
   for (const absolute of await sourceFiles(root)) {
     if (absolute === allowed) continue

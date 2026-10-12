@@ -1,0 +1,682 @@
+/*
+ * dsh-loop-guard — stylesheet for the 监控 tab and the alarm card.
+ *
+ * Every colour is a `--dsw-alias-*` token, so light/dark (and any future theme)
+ * follow the shell automatically. Nothing here is a literal colour: a hard-coded
+ * red would be the one element that ignores the user's theme, and this plugin's
+ * whole job is to be noticed — by being *right*, not by being loud in the wrong
+ * palette.
+ *
+ * Two roots, one file:
+ *   `.lg-root`   the tab, which scrolls inside whatever the shell gives it;
+ *   `.lg-alarm`  the card, which floats in the shell overlay layer.
+ * The pieces in between (bar, badge, table, banner, button) are shared.
+ *
+ * Class names are plain `lg-*`, not hashed: the stylesheet ships with the view
+ * that uses it, and a readable selector is worth more here than collision
+ * proofing against a hash nobody reads.
+ */
+
+/* ------------------------------------------------------------------- tab */
+
+.lg-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 24px 32px;
+  box-sizing: border-box;
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  container-type: inline-size;
+  container-name: lg;
+}
+
+.lg-root::-webkit-scrollbar {
+  width: 8px;
+}
+
+.lg-root::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--dsw-alias-scrollbar-bg-l2);
+}
+
+.lg-root::-webkit-scrollbar-thumb:hover {
+  background: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.lg-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.lg-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-subtitle {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
+.lg-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.lg-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-dimmed);
+}
+
+/* Only the live dot is coloured: an idle indicator should not compete with it. */
+.lg-dot--live {
+  background: var(--dsw-alias-state-success-primary);
+}
+
+/* ------------------------------------------------------------------ panels */
+
+.lg-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.lg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lg-hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+/* The master switch is a checkbox plus a label, styled to read as a switch. */
+.lg-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.lg-switch input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--dsw-alias-brand-primary);
+  cursor: pointer;
+}
+
+.lg-switch input:disabled {
+  cursor: default;
+}
+
+.lg-switch-text {
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-thresholds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.lg-threshold {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lg-threshold-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lg-threshold-name {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.lg-threshold-hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.lg-number {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.lg-number:hover:not(:disabled) {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.lg-number:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.lg-number:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- sections */
+
+.lg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.lg-section-title {
+  margin: 0;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lg-empty {
+  padding: 20px 16px;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-lg);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------- table */
+
+.lg-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+.lg-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.lg-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+  vertical-align: middle;
+}
+
+.lg-table tr:last-child td {
+  border-bottom: none;
+}
+
+.lg-table tbody tr:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* A muted session stays legible — it is muted, not gone. */
+.lg-row-muted td {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.lg-cell-label {
+  width: 34%;
+  min-width: 0;
+}
+
+.lg-cell-bar {
+  width: 22%;
+}
+
+.lg-cell-unit {
+  width: 34%;
+  min-width: 0;
+}
+
+.lg-cell-actions {
+  width: 10%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.lg-session-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+.lg-row-muted .lg-session-name {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.lg-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.lg-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-fill-l2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.lg-badge--off {
+  background: var(--dsw-alias-bg-layer-3);
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.lg-badge--good {
+  background: var(--dsw-alias-state-success-tertiary);
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/* --------------------------------------------------------------------- bar */
+
+.lg-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-fill-l2);
+  overflow: hidden;
+}
+
+.lg-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--dsw-alias-state-warn-primary);
+  transition: width 0.2s ease-out;
+}
+
+/* Past the threshold the bar turns into the "this is happening now" colour. */
+.lg-bar-fill--hot {
+  background: var(--dsw-alias-state-error-primary);
+}
+
+.lg-bar-label {
+  display: block;
+  margin-top: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-bar-fill {
+    transition: none;
+  }
+}
+
+/* -------------------------------------------------------------- hit history */
+
+.lg-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lg-hit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lg-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-left: 3px solid var(--dsw-alias-state-error-primary);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+/* Dismissed hits stay in the list as history, so they recede rather than vanish. */
+.lg-hit--dismissed {
+  border-left-color: var(--dsw-alias-border-l3);
+  opacity: 0.72;
+}
+
+.lg-hit-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lg-hit-time {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lg-hit-session {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+}
+
+.lg-hit-foot {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+/* The repeated text itself: monospace, because the loop is a *string* and its
+   whitespace is often the thing that gives it away. */
+.lg-unit {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 6px;
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-markdown-inline-code);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-markdown-code-font-family);
+  font-size: 12px;
+}
+
+.lg-dim {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+/* ----------------------------------------------------------------- banners */
+
+.lg-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+}
+
+.lg-banner--error {
+  border-color: var(--dsw-alias-state-error-primary);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-error);
+}
+
+.lg-banner-title {
+  font-weight: 600;
+}
+
+.lg-banner-hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.lg-banner--error .lg-banner-hint {
+  color: var(--dsw-alias-label-error);
+}
+
+/* ----------------------------------------------------------------- buttons */
+
+.lg-button {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--dsw-radius-md);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.lg-button:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.lg-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.lg-button--primary {
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+}
+
+.lg-button--primary:hover:not(:disabled) {
+  background: var(--dsw-alias-button-primary-hover);
+}
+
+.lg-button--ghost {
+  border-color: var(--dsw-alias-border-l2);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.lg-button--ghost:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* -------------------------------------------------------------- alarm card */
+
+/*
+ * The card sits in the shell's overlay layer, which is
+ * `position: absolute; inset: 0; pointer-events: none` with
+ * `.overlayLayer > * { pointer-events: auto }`. It therefore positions itself
+ * against that layer and must NOT assume it is the only child: it is anchored to
+ * the top-right corner, clear of the conversation's own controls.
+ */
+.lg-alarm {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(420px, calc(100% - 32px));
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-state-error-primary);
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-alias-bg-overlay);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: var(--dsw-elevation-prominent);
+}
+
+.lg-alarm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* The mark is a shape, not a colour: it survives every theme, including a
+   high-contrast one where an all-red card would lose its own border. */
+.lg-alarm-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--dsw-alias-state-error-primary);
+  color: var(--dsw-alias-label-primary-foreground);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lg-alarm-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lg-alarm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.lg-alarm-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lg-field-label {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.lg-field-value {
+  min-width: 0;
+}
+
+/* The unit is the alarm's headline fact: give it room for two lines here,
+   unlike the one-line table cell. */
+.lg-alarm-unit .lg-unit {
+  white-space: normal;
+  word-break: break-word;
+  max-height: 3.6em;
+  overflow: hidden;
+  padding: 6px 8px;
+}
+
+.lg-alarm-stats {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lg-alarm-repeats {
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lg-alarm-time {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lg-alarm-note {
+  padding: 6px 8px;
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.lg-alarm-note--done {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.lg-alarm-note--live {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.lg-alarm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+/*
+ * The card is sized against the overlay, not the viewport, so the only thing
+ * that changes at a narrow width is the table's fixed columns: at 520px the
+ * score bar is the first thing to go, because the unit text is what tells the
+ * user *what* is looping.
+ */
+@container lg (max-width: 520px) {
+  .lg-cell-bar,
+  .lg-table th.lg-cell-bar {
+    display: none;
+  }
+
+  .lg-cell-label {
+    width: 46%;
+  }
+
+  .lg-cell-unit {
+    width: 44%;
+  }
+}

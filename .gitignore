@@ -1,0 +1,23 @@
+# Build artifacts and the asar scratch space.
+node_modules/
+
+# One-off scratch files: asar dumps and the single-use scanners written while
+# reverse-engineering an interface. They are regenerable from the archive and
+# must not travel with the package.
+_probe/_*.js
+_probe/agent-*.md
+_probe/agent-*.d.ts
+
+# Probes that talk to a running host leave request bodies and screenshots behind.
+_probe/browser/.chrome-profile/
+_probe/browser/shots/
+_probe/shot-*.png
+_probe/*-test.json
+_probe/t-*.json
+
+# Editor and OS noise.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

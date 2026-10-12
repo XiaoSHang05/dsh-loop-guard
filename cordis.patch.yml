@@ -1,0 +1,56 @@
+# dsh-loop-guard bundle patch.
+#
+# Inserts the plugin row into the profile roster. The row is a bare plugin by
+# package name:
+#
+#   * the host half (exports ".") runs in the host process — it subscribes
+#     `agent/assistant-stream`, runs the detector, cancels a runaway turn, and
+#     serves the read/write HTTP surface;
+#   * the `dsh.client` declaration in package.json makes the browser half
+#     (exports "./client") load in the web GUI, where it registers the 监控 tab
+#     and the alarm overlay.
+#
+# The host half injects `webServer`, which the web shell already provides. It has
+# no other dependency: the room plugin next door needs its backend present, this
+# one needs nothing.
+#
+# Install as a profile bundle layer (the path is wherever you cloned this):
+#   dsh plugin --profile desktop add link:<path to this checkout>
+#
+# A restart is required after installing or changing this file: the host half is
+# read once at process start, and replacing an installed package version needs a
+# restart through Plugin Manager.
+- insert:
+    - id: loop-guard
+      name: dsh-loop-guard
+      config:
+        # Master switch. Off means the subscription stays silent — nothing is
+        # buffered and nothing is cancelled.
+        enabled: true
+        # Watch the two halves of the stream independently.
+        watchText: true
+        watchReasoning: true
+        # Contiguous copies of one unit that count as a loop. The user's own
+        # acceptance case is "Let me go." repeated 100 times, and asked for it to
+        # be caught within 5–10 copies; the detector reports on the 6th.
+        minRepeat: 5
+        # Shortest / longest unit worth calling a repetition, in characters.
+        minUnit: 6
+        maxUnit: 1024
+        # Tail window the search runs over, and how much new text must arrive
+        # before the search runs again.
+        windowChars: 8192
+        checkEvery: 32
+        # Second detector: how many recent lines are examined, and what share of
+        # them must be near-duplicates before that counts as a loop. This is the
+        # one that catches "Step 3: processing item 7" over and over.
+        densityLines: 8
+        densityRatio: 0.75
+        # Cancel the turn when a loop is caught. Off makes this an alarm-only
+        # build without editing any code.
+        cancel: true
+        # Play a tone with the alarm card.
+        sound: true
+        # Sessions never watched. Empty by default: everything running is watched,
+        # and this list is the only thing that narrows it.
+        excludedSessions: []

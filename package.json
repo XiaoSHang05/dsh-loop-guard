@@ -1,0 +1,57 @@
+{
+  "name": "dsh-loop-guard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Repeat-output guard for DSH: watches the live assistant stream (thinking and text), detects verbatim repetition, raises a manual-dismiss alarm, and cancels the runaway turn.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "loop-guard",
+    "repetition",
+    "degeneration",
+    "watchdog"
+  ],
+  "license": "MIT",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./lib/client.js",
+    "./detect": "./src/detect.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node scripts/check.mjs && node scripts/test.mjs"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "dshWorkshop": {
+    "permissions": []
+  },
+  "peerDependencies": {},
+  "engines": {
+    "dsh": ">=0.2.0-0 <0.3.0"
+  }
+}

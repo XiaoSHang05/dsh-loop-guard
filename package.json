@@ -1,6 +1,6 @@
 {
   "name": "dsh-loop-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Repeat-output guard for DSH: watches the live assistant stream (thinking and text), detects verbatim repetition, raises a manual-dismiss alarm, and cancels the runaway turn.",

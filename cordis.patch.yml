@@ -27,9 +27,6 @@
         # Master switch. Off means the subscription stays silent — nothing is
         # buffered and nothing is cancelled.
         enabled: true
-        # Watch the two halves of the stream independently.
-        watchText: true
-        watchReasoning: true
         # Contiguous copies of one unit that count as a loop. The user's own
         # acceptance case is "Let me go." repeated 100 times, and asked for it to
         # be caught within 5–10 copies; the detector reports on the 6th.
@@ -40,10 +37,9 @@
         # Tail window the search runs over, and how much new text must arrive
         # before the search runs again.
         windowChars: 8192
-        checkEvery: 32
         # Second detector: how many recent lines are examined, and what share of
-        # them must be near-duplicates before that counts as a loop. This is the
-        # one that catches "Step 3: processing item 7" over and over.
+        # them must match after whitespace normalization. Different numbers
+        # remain different content; this is not a retry-loop classifier.
         densityLines: 8
         densityRatio: 0.75
         # Cancel the turn when a loop is caught. Off makes this an alarm-only
@@ -51,6 +47,7 @@
         cancel: true
         # Play a tone with the alarm card.
         sound: true
-        # Sessions never watched. Empty by default: everything running is watched,
-        # and this list is the only thing that narrows it.
-        excludedSessions: []
+        # Show a manual-dismiss alarm. Both output streams are always watched.
+        alarm: true
+        # Individual session switches are in-memory overrides of this default.
+        scopeDefault: all

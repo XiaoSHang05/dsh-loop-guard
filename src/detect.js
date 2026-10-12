@@ -16,10 +16,10 @@
  *    sentence, the same list item, the same paragraph, until the token ceiling. This is the
  *    failure the user described ("Let me go. Let me go. ... 100 times").
  *
- * 2. `density` — near-repetition. Every line differs, so no verbatim cycle exists, yet no
- *    line says anything new: "Step 3: processing item 17", "...18", "...19". A verbatim
- *    matcher is blind to this, and it is a real degeneration mode. Digits are collapsed
- *    before comparing, which is exactly what makes these lines the same line.
+ * 2. `density` — repeated lines separated by other text or varying whitespace.
+ *    Lines are compared after whitespace normalization, but digits remain content:
+ *    a numeric table must not be mistaken for a runaway counter. This conservative
+ *    detector does not diagnose loops whose only changes are increasing counters.
  *
  * The cycle detector runs first because it is the cheaper and more specific signal; density
  * is consulted only when no cycle was found, so a genuine loop is never reported as a
@@ -127,12 +127,11 @@ function hasContent(unit) {
 }
 
 /**
- * Collapse what makes two lines "the same line" without being the same string: leading and
- * trailing space, runs of whitespace, and digits. A counter that only ever increments is not
- * new information, and treating it as new is how a density loop slips past a verbatim check.
+ * Normalize whitespace only. Different numbers remain different content, even in
+ * otherwise identical lines; detecting counter loops would also flag ordinary data.
  */
 function normalizeLine(line) {
-  return line.trim().replace(/\s+/gu, ' ').replace(/\d+/gu, '#')
+  return line.trim().replace(/\s+/gu, ' ')
 }
 
 /**
@@ -180,7 +179,7 @@ function scanCycle(text, config) {
 
     const wanted = period * (config.minRepeat + 1)
     const matched = runLength(text, period, wanted, budget)
-    const repeats = Math.floor(matched / period) + 1
+    const repeats = matched >= period ? Math.floor(matched / period) + 1 : 0
     const qualifies = repeats >= config.minRepeat
 
     if (qualifies) {
@@ -210,6 +209,7 @@ function scanDensity(text, config) {
   let duplicates = 0
   let sample = ''
   for (const line of window) {
+    if (!hasContent(line)) continue
     if (seen.has(line)) {
       duplicates += 1
       if (sample === '') sample = line
@@ -256,10 +256,10 @@ export function createDetector(options) {
     const ratio = density.total === 0 ? 0 : density.duplicates / density.total
 
     if (ratio >= config.densityRatio) {
-      latest[stream] = { repeats: density.duplicates, unit: displayUnit(density.sample), score: 1 }
+      latest[stream] = { repeats: density.duplicates, unit: shorten(density.sample), score: 1 }
       if (latched[stream]) return null
       latched[stream] = true
-      return { stream, kind: 'density', unit: displayUnit(density.sample), repeats: density.duplicates, at: Date.now() }
+      return { stream, kind: 'density', unit: shorten(density.sample), repeats: density.duplicates, at: Date.now() }
     }
 
     // Neither detector fired. The bar shows whichever signal is closer to its own threshold:

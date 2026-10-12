@@ -90,13 +90,24 @@ loud('a loop that starts mid-buffer is caught',
   'Here is a normal opening sentence that is not repeated at all. ' + 'and now the loop begins. '.repeat(20),
   'text', 'cycle')
 
-loud('a counting loop with unique lines is caught by density',
-  Array.from({ length: 40 }, (_, i) => 'Step 3: processing item ' + i).join('\n') + '\n',
-  'text', 'density')
+quiet('different numbers remain different content',
+  Array.from({ length: 40 }, (_, i) => 'Step 3: processing item ' + i).join('\n') + '\n')
+quiet('timestamped retry lines are not classified from text alone',
+  Array.from({ length: 40 }, (_, i) => 'attempt ' + i + ': connection timed out, will retry').join('\n') + '\n')
 
-loud('a timestamped retry loop is caught by density',
-  Array.from({ length: 40 }, (_, i) => 'attempt ' + i + ': connection timed out, will retry').join('\n') + '\n',
-  'text', 'density')
+{
+  const detector = createDetector({ minRepeat: 50, checkEvery: 1 })
+  const text = Array.from({ length: 10 }, (_, i) => i % 2 ? '  foo   bar  ' : 'foo bar').join('\n')
+  const hit = detector.push('text', text)
+  check('whitespace variants trigger the independent density rule', hit?.kind === 'density')
+  check('density sample retains the original word order', hit?.unit === 'foo bar', hit?.unit)
+}
+quiet('numeric JSON data is not a loop', JSON.stringify(Array.from({length:8}, (_, i) => ({value:i})), null, 2))
+quiet('multiple dividers remain quiet', ('='.repeat(20) + '\n').repeat(10))
+{
+  const d = quiet('healthy prose remains quiet', 'No repeating information here. The next sentence is about a different topic entirely.')
+  check('healthy prose has zero repeats and zero score', d.snapshot().text.repeats === 0 && d.snapshot().text.score === 0)
+}
 
 /* ------------------------------------------------------------------------ negatives */
 

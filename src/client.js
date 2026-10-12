@@ -152,7 +152,7 @@ function createLoopGuardClient(React, css, require_) {
     'alarm.unit': '重复内容',
     'alarm.repeats': '连续 {count} 次',
     'alarm.cancelled': '这一回合已经被打断。',
-    'alarm.notCancelled': '回合仍在继续：宿主半的打断开关是关的。',
+    'alarm.notCancelled': '未自动打断：请检查配置，必要时手动停止该回合。',
     'alarm.dismiss': '知道了',
     'alarm.dismissing': '正在关闭…',
     'alarm.dismissFailed': '关闭失败：{message}',
@@ -204,7 +204,7 @@ function createLoopGuardClient(React, css, require_) {
     'alarm.unit': 'Repeated text',
     'alarm.repeats': '{count} copies in a row',
     'alarm.cancelled': 'This turn has been interrupted.',
-    'alarm.notCancelled': 'The turn is still running: the host half has cancelling switched off.',
+    'alarm.notCancelled': 'Not automatically interrupted. Check settings or stop the turn manually.',
     'alarm.dismiss': 'Got it',
     'alarm.dismissing': 'Dismissing…',
     'alarm.dismissFailed': 'Could not dismiss: {message}',
@@ -273,9 +273,8 @@ function createLoopGuardClient(React, css, require_) {
   /**
    * A score as a whole-number percentage.
    *
-   * Unclamped on purpose: the bar's *width* is clamped to the track, but its
-   * label says how far past the threshold the session actually is, and a 300%
-   * loop is a different event from one sitting exactly on the line.
+   * The core reports normalized progress (0..1), so a full bar means the
+   * selected detector reached its threshold. Repeat counts are shown separately.
    */
   function percentOf(score) {
     var value = typeof score === 'number' && isFinite(score) ? score : 0
@@ -358,9 +357,7 @@ function createLoopGuardClient(React, css, require_) {
           chars: countOr(row.chars, 0),
           repeats: repeats,
           unit: oneLine(row.unit, 160),
-          // `score` is repeats/minRepeat, and it is deliberately NOT clamped to 1:
-          // 1 means "at the threshold", and the view needs to be able to say how
-          // far past it the session is. Only the drawn width is clamped.
+          // Normalized core progress towards the selected threshold (0..1).
           score: scoreOr(row.score, repeats, config.minRepeat),
           lastHitAt: numberOr(row.lastHitAt, null),
         })
@@ -443,9 +440,9 @@ function createLoopGuardClient(React, css, require_) {
    */
   function scoreOr(score, repeats, minRepeat) {
     var direct = numberOr(score, null)
-    if (direct !== null) return direct < 0 ? 0 : direct
+    if (direct !== null) return clamp01(direct)
     if (minRepeat > 0 && typeof repeats === 'number' && isFinite(repeats)) {
-      return repeats / minRepeat
+      return clamp01(repeats / minRepeat)
     }
     return 0
   }
@@ -489,6 +486,10 @@ function createLoopGuardClient(React, css, require_) {
       var Ctor = window.AudioContext || window.webkitAudioContext
       if (typeof Ctor !== 'function') return
       var context = new Ctor()
+      if (typeof context.resume === 'function') {
+        var resumed = context.resume()
+        if (resumed && typeof resumed.catch === 'function') resumed.catch(function () {})
+      }
       var start = context.currentTime + 0.02
       var blip = TONE.blipMs
       var step = blip + TONE.gapMs
@@ -510,7 +511,8 @@ function createLoopGuardClient(React, css, require_) {
       var closeAt = (start + TONE.repeats * step + 0.2 - context.currentTime) * 1000
       setTimeout(function () {
         try {
-          context.close()
+          var closed = context.close()
+          if (closed && typeof closed.catch === 'function') closed.catch(function () {})
         } catch (error) {
           /* a context that refuses to close is a leak, not a failure */
         }
@@ -544,6 +546,7 @@ function createLoopGuardClient(React, css, require_) {
     var listeners = new Set()
     var disposers = []
     var disposed = false
+    var started = false
     var pending = false
     var pollTimer = null
     var stream = null
@@ -717,6 +720,9 @@ function createLoopGuardClient(React, css, require_) {
     }
 
     function start() {
+      if (started) return
+      started = true
+      disposed = false
       openStream()
       // Until the stream reports `open`, assume it is not there: the fallback
       // poll is the only channel, so it runs at the tight interval.
@@ -744,6 +750,7 @@ function createLoopGuardClient(React, css, require_) {
         }
       },
       dispose: function () {
+        started = false
         disposed = true
         listeners.clear()
         for (var i = 0; i < disposers.length; i += 1) {
@@ -1345,7 +1352,24 @@ function createLoopGuardClient(React, css, require_) {
     // conversation is open, so the store is started here rather than lazily by
     // the tab: an alarm must arrive while the user is looking at something else.
     var store = createStore(ctx)
-    var refCount = 0
+    ctx.effect(function () {
+      store.start()
+      return function () { store.dispose() }
+    }, 'dsh-loop-guard: shared store')
+    // Store lifetime belongs to the plugin, not the selected conversation tab.
+
+    // Optional dock integration: no manifest dependency and no retry timer.
+    ctx.effect(function () {
+      try {
+        var dock = require_('dsh-dock/client').dockBridge
+        if (!dock || typeof dock.register !== 'function') return
+        return dock.register({
+          id: 'loop-guard', name: '循环守卫', order: 120,
+          description: '监控思考与输出的重复内容', package: 'dsh-loop-guard',
+          View: function () { return h(LoopGuardView, { store: store, t: translateFn }) }
+        })
+      } catch (error) { /* Dock is optional; the tab and alarm remain independent. */ }
+    }, 'dsh-loop-guard: optional dock')
 
     /**
      * Reference-counted start/stop.
@@ -1356,15 +1380,8 @@ function createLoopGuardClient(React, css, require_) {
      * with nothing to say.
      */
     function retain() {
-      refCount += 1
-      if (refCount === 1) store.start()
-      return function () {
-        refCount -= 1
-        if (refCount <= 0) {
-          refCount = 0
-          store.dispose()
-        }
-      }
+      store.start()
+      return function () {}
     }
 
     ctx.slots.inject('conversation.view', function () {

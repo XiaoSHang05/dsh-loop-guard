@@ -1,0 +1,27 @@
+import { EventEmitter } from 'node:events'
+import { apply } from '../../src/index.js'
+
+export function mount(config = {}) {
+  const routes = new Map(), hooks = new Map(), effects = [], logs = []
+  const ctx = {
+    get: name => name === 'webServer' ? { register(route) { routes.set(route.path, route); return () => routes.delete(route.path) } } : name === 'agents' ? {} : undefined,
+    on(name, fn, options) { hooks.set(name, {fn, options}); return () => hooks.delete(name) },
+    effect(fn) { const cleanup = fn(); if (typeof cleanup === 'function') effects.push(cleanup) },
+    logger: { info: (...args) => logs.push(args), warn: (...args) => logs.push(args) }
+  }
+  const cleanup = apply(ctx, config)
+  function emit(agent, type, text, attemptId = 'opaque-attempt') {
+    hooks.get('agent/assistant-stream').fn({ agent, frame: {type:'chunk', attemptId, chunk:{ type, text }} })
+  }
+  async function request(method, action, body) {
+    const req = new EventEmitter(), res = new EventEmitter()
+    req.method = method; req.url = '/dsh-loop-guard/api/' + action
+    res.text = ''; res.writeHead = (status, headers) => {res.status = status; res.headers = headers}
+    res.write = text => {res.text += text; return true}; res.end = text => {if (text) res.write(text); res.ended = true}
+    const pending = routes.get(req.url).handler(req, res)
+    if (method === 'POST') {req.emit('data', Buffer.from(JSON.stringify(body))); req.emit('end')}
+    await pending
+    return { req, res, json: action === 'events' ? null : JSON.parse(res.text) }
+  }
+  return {routes, hooks, logs, emit, request, cleanup() {cleanup(); for (const fn of effects) fn()} }
+}

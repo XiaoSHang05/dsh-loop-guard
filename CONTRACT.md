@@ -52,7 +52,7 @@ Returns `null`, or on the first hit of a loop:
 {
   stream: 'thinking' | 'text',
   kind: 'cycle' | 'density',
-  unit: string,      // the repeated text, word-aligned and trimmed to <= 120 chars for display
+  unit: string,      // cycle: word-aligned; density: normalized line in original order; <= 120 chars
   repeats: number,   // how many contiguous copies were seen (cycle) / duplicate lines (density)
   at: number,        // Date.now() at detection
 }
@@ -67,7 +67,7 @@ is returned unrotated.
 Other methods:
 
 - `detector.snapshot()` → `{ [stream]: { chars, repeats, unit, score } }` for the live view.
-  `score` is the current repeat count (0 when nothing repeats).
+  `score` is normalized progress towards the winning detector's threshold (0..1).
 - `detector.reset()` — clears buffers and the "already reported" latch. The latch means one
   loop produces **one** hit, not one hit per chunk.
 - `detector.configure(patch)` — merges options; returns the effective options.
@@ -129,7 +129,7 @@ Status codes: `400` bad body, `404` unknown action, `405` wrong method, `503` no
   chars: number,          // chars seen on the busiest stream
   repeats: number,        // current contiguous repeat count, 0 when healthy
   unit: string,           // the current repeated unit, '' when healthy
-  score: number,          // repeats / minRepeat, 0..1+; the bar in the UI
+  score: number,          // detector progress 0..1; density and cycle thresholds differ
   lastHitAt: number | null,
 }
 ```

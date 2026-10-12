@@ -35,7 +35,11 @@
  * @module dsh-loop-guard
  */
 
+import Schema from '@deepseek-ai/schemastery'
 import { createDetector, DEFAULTS } from './detect.js'
+
+// Settings is addressed by the patch entry id, never the package name.
+const SETTINGS_NS = 'loop-guard'
 
 /** Cordis 插件名。 */
 export const name = 'dsh-loop-guard'
@@ -108,6 +112,31 @@ const CONFIG_FIELDS = {
   scopeDefault: { kind: 'scope', values: ['all', 'selected'] },
 }
 
+// Editable fields must be volatile: settings.update persists them without
+// unloading a running detector. The same field table validates HTTP patches.
+export const Config = Schema.object(Object.fromEntries(
+  Object.entries(CONFIG_FIELDS).map(([key, field]) => {
+    let schema
+    if (field.kind === 'boolean') schema = Schema.boolean()
+    else if (field.kind === 'scope') schema = Schema.union(field.values.map(value => Schema.const(value)))
+    else {
+      schema = Schema.number().min(field.min).max(field.max)
+      if (field.kind === 'integer') schema = schema.step(1)
+    }
+    return [key, schema.default(DEFAULT_CONFIG[key]).volatile()]
+  }),
+))
+
+function plainConfig(value) {
+  if (!value || typeof value !== 'object') return {}
+  return Object.fromEntries(Object.keys(CONFIG_FIELDS)
+    .filter(key => Object.prototype.hasOwnProperty.call(value, key))
+    .map(key => {
+      const item = value[key]
+      return [key, item && typeof item.get === 'function' ? item.get() : item]
+    }))
+}
+
 /** 流名。契约里就这两个，检测核心也只认这两个。 */
 const STREAMS = ['thinking', 'text']
 
@@ -127,20 +156,31 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body))
 }
 
-/** 收集并解析 JSON 请求体。空体算 `{}`。 */
+/**
+ * 收集并解析 JSON 请求体。空体算 `{}`。
+ *
+ * 解析失败一律包成 400：契约的状态码表把「body 读不出来」定成 bad body，而 `JSON.parse`
+ * 抛的 SyntaxError 不带 `status`，直接 reject 出去会被统一 catch 归成 500——那等于把
+ * 「你发坏了」说成「我坏了」，客户端会照着 500 渲染成宿主出错。
+ */
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = []
     req.on('data', (chunk) => chunks.push(chunk))
     req.on('end', () => {
+      const text = Buffer.concat(chunks).toString('utf8')
+      if (text === '') {
+        resolve({})
+        return
+      }
       try {
-        const text = Buffer.concat(chunks).toString('utf8')
-        resolve(text === '' ? {} : JSON.parse(text))
+        resolve(JSON.parse(text))
       } catch (error) {
-        reject(error)
+        reject(badRequest('request body is not valid JSON'))
       }
     })
-    req.on('error', reject)
+    // 传输中途出错同样是「body 读不出来」，跟解析失败归一类。
+    req.on('error', () => reject(badRequest('request body could not be read')))
   })
 }
 
@@ -178,7 +218,7 @@ function noBackend() {
  * 只返回被显式给出的字段，调用方据此合并——这样 `POST config` 天生就是增量语义，
  * 客户端不必先把整个配置读回来再写回去（那中间会丢并发的改动）。
  */
-function cleanConfigPatch(patch) {
+function cleanConfigPatch(patch, base = DEFAULT_CONFIG) {
   if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) {
     throw badRequest('patch must be an object')
   }
@@ -210,7 +250,8 @@ function cleanConfigPatch(patch) {
     clean[key] = raw
   }
   // 跨字段：窗口比单元还小的话检测核心永远搜不到东西，这种组合当场拒掉比让它静默失效好。
-  const merged = { ...DEFAULT_CONFIG, ...clean }
+  const merged = { ...base, ...clean }
+  if (merged.minUnit > merged.maxUnit) throw badRequest('minUnit must not exceed maxUnit')
   if (merged.maxUnit > merged.windowChars) {
     throw badRequest('maxUnit must not exceed windowChars')
   }
@@ -244,19 +285,12 @@ function agentOf(payload) {
 /**
  * 取会话 id。
  *
- * `agent.session.id` 是权威来源。拿不到 agent 时退而从 `frame.attemptId` 切：它形如
- * `${sessionId}:${attempt}`（`LlmAttemptId` 就是这么拼的），切掉最后一段就是会话 id。
- * 比丢掉这一帧强。
+ * The Agent is the authority. LlmAttemptId is opaque: deriving an identity
+ * from its spelling can associate a stream (and a cancellation) with the wrong session.
  */
-function sessionIdOf(agent, frame) {
-  const id = agent?.session?.id
-  if (typeof id === 'string' && id !== '') return id
-  const attemptId = frame?.attemptId
-  if (typeof attemptId === 'string' && attemptId !== '') {
-    const cut = attemptId.lastIndexOf(':')
-    return cut > 0 ? attemptId.slice(0, cut) : attemptId
-  }
-  return undefined
+function sessionIdOf(agent) {
+  const id = agent?.session?.id ?? agent?.id
+  return typeof id === 'string' && id !== '' ? id : undefined
 }
 
 /**
@@ -381,21 +415,21 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
       dismissed: false,
     }
 
-    if (config.cancel) {
+    hits.unshift(entry)
+    if (hits.length > HITS_CAP) hits.length = HITS_CAP
+    record.lastHitAt = entry.at
+    bump()
+
+    if (config.cancel && typeof agent?.cancel === 'function') {
       try {
         // keepInbox:true 是关键：只掐掉在飞的这一回合，排队和引导中的工作原样留着。
         // 不带它的话 cancel 会连队列一起清空——用户只是想让它别复读了，不是想丢掉自己的输入。
-        agent?.cancel?.({ kind: 'hook', reason: 'loop-guard: repeated output' }, { keepInbox: true })
+        agent.cancel({ kind: 'hook', reason: 'loop-guard: repeated output' }, { keepInbox: true })
         entry.cancelled = true
       } catch (error) {
         log('warn', 'dsh-loop-guard: cancel failed for %s (%s)', record.sessionId, String((error && error.message) || error))
       }
     }
-
-    hits.unshift(entry)
-    if (hits.length > HITS_CAP) hits.length = HITS_CAP
-    record.lastHitAt = entry.at
-    bump()
 
     // alarm 帧是「弹卡片」的触发器，所以 alarm:false 时不发它。但 hit 本身仍然要送达客户端，
     // 于是靠上面那次 bump 走一帧 state——卡片没了，命中历史还在。
@@ -424,36 +458,30 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
   function ingest(payload) {
     try {
       const frame = payload?.frame
-      if (frame === null || typeof frame !== 'object') return
-      if (frame.type !== 'chunk') return
-      const stream = STREAM_BY_CHUNK[frame?.chunk?.type]
-      if (stream === undefined) return
-      const text = frame.chunk.text
-      if (typeof text !== 'string' || text === '') return
-
+      if (!frame || typeof frame !== 'object') return
+      if (frame.type !== 'start' && frame.type !== 'chunk') return
       const agent = agentOf(payload)
-      const sessionId = sessionIdOf(agent, frame)
+      const sessionId = sessionIdOf(agent)
       if (sessionId === undefined) return
-
       const record = rowOf(sessionId)
       record.agent = agent
-
-      // 换了 attempt 就是新的一次输出：缓冲区里的旧尾巴和「已报过」的闩都得清掉，
-      // 否则上一回合的循环会把这一回合的第一次重复直接吃掉。
-      if (record.attemptId !== frame.attemptId) {
+      if (frame.type === 'start' || record.attemptId !== frame.attemptId) {
         record.attemptId = frame.attemptId
         record.detector?.reset()
         record.label = labelOf(ctx, agent, sessionId)
         bump()
+        scheduleState()
       }
-
-      // 不看的时候也留一行：监控页要能列出会话，用户才点得到「监视这一个」。
+      if (frame.type === 'start') return
+      const stream = STREAM_BY_CHUNK[frame.chunk?.type]
+      const text = frame.chunk?.text
+      if (stream === undefined || typeof text !== 'string' || text === '') return
       if (!isMonitored(record)) return
-
-      if (record.detector === null) record.detector = createDetector({ ...DEFAULTS, ...detectorOptions(config) })
+      if (record.detector === null) record.detector = createDetector(detectorOptions(config))
       const hit = record.detector.push(stream, text)
       bump()
-      if (hit !== null && hit !== undefined) recordHit(record, hit, agent)
+      scheduleState()
+      if (hit != null) recordHit(record, hit, agent)
     } catch (error) {
       log('warn', 'dsh-loop-guard: stream ingest failed (%s)', String((error && error.message) || error))
     }
@@ -474,16 +502,15 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
       const unit = snapshot[stream]
       const streamChars = typeof unit?.chars === 'number' ? unit.chars : 0
       const repeats = typeof unit?.repeats === 'number' ? unit.repeats : 0
-      if (streamChars > chars) chars = streamChars
-      if (repeats > bestScore) {
-        bestScore = repeats
+      const score = typeof unit?.score === 'number' ? unit.score : 0
+      chars = Math.max(chars, streamChars)
+      if (score > bestScore || (score === bestScore && streamChars > (best?.unit?.chars ?? 0))) {
+        bestScore = score
         best = { stream, unit, repeats }
       }
     }
-    // 契约把这一行的 score 定成 repeats / minRepeat（0..1+），不是检测核心那个夹到 1 的分数：
-    // 进度条要能一直爬过阈值，而不是在 1 上停住。
-    const repeats = best === null ? 0 : best.repeats
-    const score = config.minRepeat > 0 ? repeats / config.minRepeat : 0
+    const repeats = best?.repeats ?? 0
+    const score = bestScore
     return {
       sessionId: record.sessionId,
       label: record.label,
@@ -517,10 +544,11 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
    * 活着的检测器要重新 configure：阈值改了却只影响下一次新建的检测器，等于用户改了个寂寞。
    */
   function applyConfigPatch(patch) {
-    const clean = cleanConfigPatch(patch)
+    const clean = cleanConfigPatch(patch, config)
     config = { ...config, ...clean }
     for (const record of sessions.values()) {
-      record.detector?.configure?.({ ...DEFAULTS, ...detectorOptions(config) })
+      record.detector?.configure?.(detectorOptions(config))
+      record.detector?.reset()
     }
     bump()
     persist(clean)
@@ -532,6 +560,7 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
   function setMonitored(sessionId, monitored) {
     const record = rowOf(sessionId)
     record.monitored = monitored
+    record.detector?.reset()
     bump()
     scheduleState()
     return { sessionId, monitored: isMonitored(record) }
@@ -549,7 +578,8 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
     if (id === undefined) throw badRequest('id is required unless clearAll is true')
     const entry = hits.find((candidate) => candidate.id === id)
     if (entry === undefined) throw httpError(404, 'unknown-hit', `unknown hit ${id}`)
-    entry.dismissed = body.dismissed !== false
+    if (body.dismissed !== true) throw badRequest('dismissed must be true')
+    entry.dismissed = true
     bump()
     scheduleState()
     return { ok: true }
@@ -584,6 +614,11 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
     applyConfigPatch,
     setMonitored,
     dismiss,
+    stop() {
+      if (stateTimer !== null) clearTimeout(stateTimer)
+      stateTimer = null
+      sessions.clear()
+    },
     /** 给持久化回填用：配置被外部改掉时直接换掉整份。 */
     replaceConfig(next) {
       config = next
@@ -701,8 +736,8 @@ function createEventStream() {
  *
  * 契约要求「用 `ctx.get('settings')` 惰性读；没有该服务时就退化成内存配置」。`settings`
  * 服务是按 profile entry id 寻址的，而且只接受插件 Config 里声明为 `.volatile()` 的字段；
- * 本包的 `peerDependencies` 是空的，带不了 zod，也就没法声明那份 schema。所以这里做的是
- * 三件事：能读就读一次、能写就写一次、任何一步失败都只是让配置留在进程内存里。
+ * Config uses the host's Schemastery dependency and volatile fields. In a
+ * host without Settings, values remain in memory; persistence failures are logged.
  * 插件必须能在没有 settings 的宿主上跑起来，这个函数不许抛。
  *
  * @param ctx - cordis 上下文。
@@ -723,7 +758,7 @@ function createConfigStore(ctx) {
     try {
       const settings = settingsOf()
       if (settings === undefined) return undefined
-      const descriptor = settings.describe().find((row) => row?.ns === name)
+      const descriptor = settings.describe().find((row) => row?.ns === SETTINGS_NS)
       const value = descriptor?.value
       if (value === null || typeof value !== 'object') return undefined
       // 只认这张表里的键：settings 里的 value 是整份插件配置，可能混着别的字段。
@@ -746,7 +781,7 @@ function createConfigStore(ctx) {
     try {
       const settings = settingsOf()
       if (settings === undefined) return
-      const descriptor = settings.describe().find((row) => row?.ns === name)
+      const descriptor = settings.describe().find((row) => row?.ns === SETTINGS_NS)
       if (descriptor === undefined) return
       const result = settings.update(descriptor.ns, patch, descriptor.revision)
       if (result !== null && typeof result?.catch === 'function') {
@@ -835,7 +870,7 @@ export function apply(ctx, pluginConfig) {
   let config = { ...DEFAULT_CONFIG }
   if (pluginConfig !== null && typeof pluginConfig === 'object') {
     try {
-      config = { ...config, ...cleanConfigPatch(pluginConfig) }
+      config = { ...config, ...cleanConfigPatch(plainConfig(pluginConfig)) }
     } catch (error) {
       ctx.logger?.warn?.('dsh-loop-guard: plugin config ignored (%s)', String((error && error.message) || error))
     }
@@ -913,7 +948,7 @@ export function apply(ctx, pluginConfig) {
     // 契约把 404 定为「未知动作」，这条路由就是它的落点。
     try {
       const dispose = server.register({
-        kind: 'exact',
+        kind: 'prefix',
         path: API_PREFIX,
         handler: (req, res) => {
           sendJson(res, 404, {
@@ -962,6 +997,7 @@ export function apply(ctx, pluginConfig) {
         /* 拆卸期出错没有补救价值，别让它拦住后面的清理 */
       }
     }
+    guard.stop()
     stream.stop()
   }, 'dsh-loop-guard lifecycle')
 
@@ -983,6 +1019,7 @@ export function apply(ctx, pluginConfig) {
         /* 同上 */
       }
     }
+    guard.stop()
     stream.stop()
   }
 }

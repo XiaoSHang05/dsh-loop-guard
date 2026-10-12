@@ -1,180 +1,90 @@
-# dsh-loop-guard
+# 循环守卫 · dsh-loop-guard
 
-A watchdog for the DeepSeek Harness that notices when a model starts repeating itself and
-stops the turn.
+DSH 的独立插件：监视模型的**思考流和正式输出流**，发现重复内容后报警，并可自动停止当前回合。无需群聊插件；功能坞可选，不构成硬依赖。
 
-The failure it exists for: a model enters a degenerate loop and emits the same text over and
-over — the same sentence, the same paragraph, the same list — until it hits the token ceiling.
-The user's word for it is *"唱歌"* (singing). It costs a full turn's worth of time and tokens,
-and nothing in DSH notices.
+## 安装与入口
 
-```
-thinking ─┐                                    ┌─ alarm card (manual dismiss + tone)
-          ├─ detector ─── loop found ──────────┤
-text    ──┘                                    └─ agent.cancel(turn)
+兼容当前验证的 DSH `0.2.0-rc.2`；包声明范围为 `>=0.2.0-0 <0.3.0`。宿主需要提供 `webServer` 和 agent 运行时，以及 `@deepseek-ai/schemastery ^3.18.1`。
+
+在包含本文件与 package.json 的插件目录中安装：
+
+```powershell
+dsh plugin --profile desktop add "link:$($PWD.Path)"
 ```
 
-## Why this is possible at all
+**安装或更新宿主代码后重启 DSH**，然后刷新原来的网页。对话区会出现「监控」标签页。报警挂在全局浮层，无需一直停留在监控页。已安装过旧目录时，请先在插件管理器里处理旧链接，再装交付目录，避免两个目录的同名插件混用。
 
-DSH already exposes both halves of the problem, and nothing that solves it:
+该命令走 DSH 的包安装流程。若现有 profile 的其他依赖触发包龄等供应链限制，安装可能失败；不要为本插件放宽整个 profile 的安全策略。检查失败信息后再处理对应依赖。本机此前已登记开发目录链接，交付文件夹不会自动替换那个链接。
 
-| Need | What DSH provides |
-| --- | --- |
-| See output as it is produced | `agent/assistant-stream`, one event per chunk, carrying `text-delta` and `reasoning-delta` |
-| Stop the turn | `agent.cancel(cause, { keepInbox: true })` |
-| Tell the user | the `shell.overlay` client slot |
+## 使用
 
-The loop detector itself is not there. `@deepseek-ai/dsh-llm` has no repetition check, no
-frequency or presence penalty, and no n-gram guard — that gap is what this package fills.
+- 默认监视全部会话，思考与输出分别检测。
+- 「启用监控」控制全局开关；会话行可以暂停/恢复单独监控。
+- 「重复次数」控制**连续周期重复**阈值，默认 5。
+- 「重复行占比」控制**独立的重复行检测**，默认最近 8 行中 75% 是已出现的行。调高重复次数不会关闭这条规则，需要同时调整重复行占比。
+- 命中后会显示会话、流、重复片段、次数与打断状态。报警不会自动消失，点击「知道了」才关闭；关闭请求失败时卡片保留。
+- 提示音使用 WebAudio。浏览器可能要求先与页面交互才能播放声音；声音不可用不影响报警卡片或宿主打断。
+- 配置 `cancel: false` 可切换为只报警；`alarm: false` 不显示卡片；`sound: false` 关闭声音。
+- 功能坞的客户端桥接可用时尝试注册入口；桥接不可用时仍可使用监控页和独立报警。
 
-## Install
+## 检测与边界
 
-```sh
-dsh plugin --profile desktop add link:<path to this checkout>
+1. **周期重复**：在尾部窗口寻找连续相同片段；展示时把英文周期旋转到可读词边界。
+2. **重复行密度**：只归一化行首尾和连续空白，再比较相同的行。数字不同仍是不同内容，不把正常进度列表、带变化计数的重试日志视为重复行。
+3. **一次命中锁存**：同一流在同一请求中只报告一次；新请求或重新配置时清空检测缓存。
+
+宿主通过 `agent/assistant-stream` 全局订阅实时增量，命中后调用：
+
+```js
+agent.cancel(
+  { kind: 'hook', reason: 'loop-guard: repeated output' },
+  { keepInbox: true },
+)
 ```
 
-Then **restart DSH**. The host half is read once at process start; a plugin's JavaScript is not
-hot-reloaded.
+这是**回合级止损**，不是逐段撤回：已经输出的字无法收回。保留排队输入不等于撤销已执行的工具操作。正常文章故意重复很多次也可能被打断，可按场景暂停监控或改成只报警。
 
-The plugin has no dependencies. It does not require the room plugin, does not require the
-function dock, and does not require any other plugin to be present.
+只由空白或单个不同字符组成的片段会被排除，避免分隔线误报；因此单字符刷屏不是本版的检测目标。超出窗口长度/周期长度的重复也可能漏检。未加载插件之前的输出不能回溯检测。
 
-## What it watches
+## 配置
 
-Two streams, independently:
+监控页的修改先立即作用于本插件，再尽力通过宿主 Settings 持久化。若 Settings 缺席或写入失败，配置仅保存在内存中。会话级暂停/恢复名单和命中历史均为内存数据，重启后清空。历史最多 50 条，默认界面展示最新 20 条。
 
-- **`text-delta`** — what the user reads. This is where the "singing" lands.
-- **`reasoning-delta`** — what the model thinks. Loops happen here too, and they are invisible
-  until the turn finally ends.
-
-Each `(session, stream)` pair gets its own buffer. A loop in the thinking stream does not mask
-one in the text stream, and a session that is fine is not made to look guilty by another
-session that is not.
-
-## The two detectors
-
-**Cycle.** The tail of the buffer is checked for a unit repeated contiguously. The search walks
-candidate periods from `minUnit` to `maxUnit` and asks whether the last `minRepeat` copies are
-identical. This is the one that catches `Let me go. Let me go. Let me go. …`
-
-Two details that matter more than they look:
-
-- The period is only defined up to rotation. `"me go. Let "` repeats exactly as well as
-  `"Let me go. "`, and the buffer ends wherever the last chunk happened to end. The reported
-  unit is rotated to start at a word boundary and prefers a capital, so the card shows
-  `Let me go.` and not `go. Let me `.
-- A unit of whitespace never counts, and neither does a unit built from a single distinct
-  character. `====` and `----` are dividers, not loops, and a guard that fires on a markdown
-  rule is a guard the user turns off.
-
-**Density.** The recent lines are compared pairwise by character-bigram Jaccard similarity. If
-enough of them are near-duplicates, that is a loop even when no single unit repeats verbatim.
-This is the one that catches `Step 3: processing item 7`, `Step 3: processing item 8`, … — a
-shape the cycle detector cannot see, because no two copies are identical.
-
-**Latching.** One loop produces **one** hit, not one hit per chunk. Without the latch a single
-runaway turn would emit hundreds of alarms and bury the one the user needs to read.
-
-## What happens on a hit
-
-1. A hit is recorded: session, stream, kind, the repeated unit, the repeat count, the time.
-2. The turn is cancelled — `agent.cancel({ kind: 'hook', reason: 'loop-guard: repeated output' },
-   { keepInbox: true })`. `keepInbox` is deliberate: it aborts the runaway turn and leaves
-   queued work queued. The stop button in the GUI does exactly the same thing.
-3. An `alarm` frame goes out over the change stream, and the card appears.
-
-The card **never dismisses itself.** It has a dismiss button and a three-blip tone. A card that
-vanished on its own would be the one alarm the user was away for.
-
-## The monitor tab
-
-A 监控 tab next to 对话 / 轨迹 / 编队 / 群聊:
-
-- the master switch;
-- the two thresholds that actually change behaviour (`minRepeat`, `densityRatio`);
-- the live session table — score bar, current repeated unit, chars seen;
-- the hit history, newest first.
-
-Everything the tab draws is reconstructible from `GET state`. The change stream decides *when*
-to re-read that document, never *what* it says — so a dropped frame costs freshness and never
-correctness, and a client that receives no frame at all still converges by polling.
-
-## Configuration
-
-One set of thresholds for the whole host. Written in `cordis.patch.yml`, exposed through the
-plugin's `Config` (so it appears in the settings panel), and adjustable live from the monitor
-tab.
-
-| Key | Default | Meaning |
+| 配置键 | 默认值 | 含义 |
 | --- | --- | --- |
-| `enabled` | `true` | Master switch. Off watches nothing and cancels nothing. |
-| `watchText` | `true` | Watch `text-delta`. |
-| `watchReasoning` | `true` | Watch `reasoning-delta`. |
-| `minRepeat` | `5` | Contiguous copies that count as a loop. |
-| `minUnit` | `6` | Shortest unit worth calling a repetition (chars). |
-| `maxUnit` | `1024` | Longest unit searched (chars). |
-| `windowChars` | `8192` | Tail window the search runs over. |
-| `checkEvery` | `32` | Run the search at most every N appended chars. |
-| `densityLines` | `8` | Lines examined by the density detector. |
-| `densityRatio` | `0.75` | Share of those lines that must be near-duplicates. |
-| `cancel` | `true` | `false` makes this an alarm-only build without editing code. |
-| `alarm` | `true` | `false` raises no card. |
-| `sound` | `true` | Play the tone with the card. |
-| `scopeDefault` | `'all'` | Watch everything by default; the mute list is the only thing that narrows it. |
-| `excludedSessions` | `[]` | Sessions never watched. |
+| enabled | true | 全局监控开关 |
+| minRepeat | 5 | 连续周期重复阈值 |
+| minUnit / maxUnit | 6 / 1024 | 搜索周期长度范围 |
+| windowChars | 8192 | 各流保留的尾部窗口 |
+| densityLines / densityRatio | 8 / 0.75 | 重复行窗口与占比 |
+| cancel / alarm / sound | true | 自动打断、报警卡片、提示音 |
+| scopeDefault | all | 默认全部监控；selected 仅监控显式选中的会话 |
 
-## Layout
+`checkEvery=32` 是核心内部默认扫描步长，不是宿主 HTTP 配置字段。`watchText`、`watchReasoning`、`excludedSessions` 不属于本版配置 API。
 
-| Path | What it is |
-| --- | --- |
-| `src/detect.js` | the detection core — pure, no I/O, no dependencies, unit-tested on its own |
-| `src/index.js` | the host half: stream subscription, config, hits, cancel, HTTP + SSE |
-| `src/client.js` | the client half: the monitor tab and the alarm card |
-| `src/client.css` | client styles, DSH theme variables only |
-| `lib/client.js` | GENERATED from the two files above by `scripts/build-client.mjs` |
-| `cordis.patch.yml` | the bundle patch that inserts the plugin row |
-| `CONTRACT.md` | the frozen interface both halves are written against |
+## 结构
 
-The client half is not an ES module and is not JSX. `React`, the stylesheet text and the
-ModuleLoader `require` arrive as parameters, so the build script is a pure concatenation and
-the shipped artifact stays readable and diffable. There is no bundler in the toolchain, by
-design: what gets installed is what you can read.
+- `src/detect.js`：纯检测核心。
+- `src/index.js`：宿主半，包含流订阅、配置、命中记录、取消与 HTTP/SSE。
+- `src/client.js`、`src/client.css`：监控页与报警。
+- `lib/client.js`：已构建的浏览器模块，无需再构建即可安装。
+- `cordis.patch.yml`：安装条目，id 为 `loop-guard`。
+- `CONTRACT.md`：跨半数据契约。
+- `VALIDATION.md`：交付验证记录与证据边界。
 
-## Tests
+读写接口位于 `/dsh-loop-guard/api/`：`health`、`state`、`config`、`monitor`、`hits`、`events`。SSE 只通知重新读取，状态以 GET state 为准；连接异常时退回轮询。接口使用宿主 Web 的认证边界，不额外提供公网认证。
 
-```sh
+## 开发与测试（完整源码目录）
+
+交付文件夹包含源码、构建脚本和测试脚本，但不携带 node_modules、浏览器个人配置、凭据或 DSH 会话日志。测试的 React/jsdom 依赖声明在 `_probe/render/package.json`，需要先安装其开发依赖；运行宿主测试也需要可解析的 Schemastery。
+
+```powershell
+node scripts/build-client.mjs
+node scripts/check.mjs
 node scripts/test.mjs
+node _probe/mutation.mjs
 ```
 
-Four harnesses, each covering one layer:
+七组测试覆盖检测核心、宿主路由、流订阅、客户端报警/推送、跨半契约和真实 React/jsdom 挂载。变异台会临时改写三个源码文件并在 finally 中恢复，**不要与其他编辑或构建并行运行**。
 
-| Harness | Layer |
-| --- | --- |
-| `_probe/detect.mjs` | the detection core: what must fire, and what must stay quiet |
-| `_probe/host/routes.mjs` | the HTTP surface, driven through the real route table |
-| `_probe/host/stream.mjs` | the stream subscription: frames in, hits out, `cancel` really called |
-| `_probe/render/mount.mjs` | the client half mounted in jsdom |
-| `_probe/contract/wire.mjs` | the seam: the host's own output fed to the client's own decoder |
-
-Each one is written to fail when the behaviour it describes is broken. Where a check was added
-for a bug, the bug was put back to prove the check catches it — a harness that cannot go red is
-decoration.
-
-## Known limits
-
-- **This stops the bleeding, not the wound.** Text already streamed to the screen cannot be
-  recalled. The guard cancels the turn within a few repeats; it does not prevent the repeats.
-- **It will sometimes be wrong.** Normal answers repeat things: a list of similar items, a
-  markdown table, code quoted back from a file. The defaults are deliberately conservative —
-  five contiguous copies of a six-character unit, or three-quarters of the last eight lines —
-  and they are adjustable rather than fixed. A guard that cries wolf is a guard that gets
-  switched off.
-- **Granularity is the turn.** There is no step-only abort in DSH; cancelling aborts the whole
-  turn. `keepInbox: true` preserves queued input, but the turn is gone.
-- **Only what happens after the subscription.** A loop already in flight when the plugin loads
-  is not retroactively detected.
-- **Hit history is in memory.** It does not survive a host restart, and it is capped at 50.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+MIT，见 LICENSE。

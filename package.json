@@ -27,7 +27,9 @@
     "src",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CONTRACT.md",
+    "VALIDATION.md"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -50,7 +52,9 @@
   "dshWorkshop": {
     "permissions": []
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
   "engines": {
     "dsh": ">=0.2.0-0 <0.3.0"
   }

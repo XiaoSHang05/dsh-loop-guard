@@ -164,6 +164,7 @@ function createLoopGuardClient(React, css, require_) {
     'label.live': '实时',
     'label.empty.sessions': '当前没有正在运行的会话。',
     'label.empty.hits': '还没有捕获到复读。',
+    'label.clearHits': '清除历史',
     'label.more': '仅显示最近 {count} 条',
     'stream.thinking': '思考',
     'stream.text': '正文',
@@ -231,6 +232,7 @@ function createLoopGuardClient(React, css, require_) {
     'label.live': 'live',
     'label.empty.sessions': 'No session is running right now.',
     'label.empty.hits': 'No loop has been caught yet.',
+    'label.clearHits': 'Clear history',
     'label.more': 'Newest {count} only',
     'stream.thinking': 'thinking',
     'stream.text': 'output',
@@ -1364,15 +1366,28 @@ function createLoopGuardClient(React, css, require_) {
       h(
         'header',
         { className: 'lg-header' },
-        h('h2', { className: 'lg-title' }, t('title.monitor')),
+        // Title and state share one row: the state is a status word, not a
+        // column heading, and stacking it under the title pushed the subtitle
+        // down for nothing.
         h(
-          'span',
-          { className: 'lg-state' },
-          snapshot.status === 'ready'
-            ? h('span', { className: 'lg-dot lg-dot--live' }, t('label.live'))
-            : snapshot.status === 'loading'
-              ? t('label.loading')
-              : t('label.reconnecting'),
+          'div',
+          { className: 'lg-header-row' },
+          h('h2', { className: 'lg-title' }, t('title.monitor')),
+          h(
+            'span',
+            { className: 'lg-state' },
+            snapshot.status === 'ready'
+              ? [
+                  // The dot is decoration and the word is the label. They used to be
+                  // one element — the word rendered *inside* a 6px circle, so the two
+                  // overlapped on top of each other. A dot has no text.
+                  h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }),
+                  t('label.live'),
+                ]
+              : snapshot.status === 'loading'
+                ? t('label.loading')
+                : t('label.reconnecting'),
+          ),
         ),
         h('p', { className: 'lg-subtitle' }, t('subtitle')),
       ),
@@ -1411,7 +1426,25 @@ function createLoopGuardClient(React, css, require_) {
       h(
         'section',
         { className: 'lg-section' },
-        h('h3', { className: 'lg-section-title' }, t('label.hits')),
+        h(
+          'div',
+          { className: 'lg-section-head' },
+          h('h3', { className: 'lg-section-title' }, t('label.hits')),
+          snapshot.hits.length === 0
+            ? null
+            : h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'lg-button lg-button--ghost lg-button--small',
+                  disabled: busy,
+                  onClick: function () {
+                    run('hits', { clearAll: true })
+                  },
+                },
+                t('label.clearHits'),
+              ),
+        ),
         h(HitList, { hits: snapshot.hits, t: t }),
       ),
     )

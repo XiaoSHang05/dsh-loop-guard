@@ -54,6 +54,20 @@ try {
   await act(async()=>{document.querySelector('.lg-alarm-actions button').click();await wait(5)})
   check(!document.querySelector('.lg-alarm'),'successful real host dismiss removes alarm')
   check(document.querySelector('.lg-history'),'history remains available')
+  // A dot is 6px wide. The state word used to be rendered inside it, so the two
+  // drew on top of each other; the assertion is that no text lives in a dot.
+  const dot=document.querySelector('.lg-dot')
+  check(dot!==null,'the live dot is rendered')
+  check(dot.textContent==='','the dot holds no text of its own')
+  check(document.querySelector('.lg-state').textContent.trim()==='实时','the state word is readable beside the dot')
+  const clearButton=[...document.querySelectorAll('button')].find(b=>b.textContent==='清除历史')
+  check(clearButton!==undefined,'history offers a clear control')
+  check(document.querySelectorAll('.lg-hit').length>0,'there is a hit to clear')
+  await act(async()=>{clearButton.click();await wait(5)})
+  check(document.querySelectorAll('.lg-hit').length===0,'clear empties the recorded history')
+  check(document.querySelector('.lg-empty'),'the emptied list says so instead of rendering nothing')
+  check([...document.querySelectorAll('button')].find(b=>b.textContent==='清除历史')===undefined,
+    'the clear control hides once there is nothing to clear')
   const switches=[...document.querySelectorAll('.lg-switch input')]
   check(switches.length===4,'panel offers master, interrupt, tone and the user\'s own phrases')
   check(switches.every(input=>input.checked===true)===false,'the phrase switch is the one that defaults to off')

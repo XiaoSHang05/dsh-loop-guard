@@ -57,6 +57,14 @@
   flex: 0 0 auto;
 }
 
+/* The state word sits beside the title instead of above the subtitle. */
+.lg-header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .lg-title {
   margin: 0;
   font-size: 16px;
@@ -74,14 +82,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  align-self: flex-start;
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
+  white-space: nowrap;
 }
 
+/* A dot carries no text: it is a mark, sized in pixels, and any word put inside
+   it would spill over the circle. */
 .lg-dot {
   width: 6px;
   height: 6px;
+  flex: 0 0 auto;
   border-radius: 50%;
   background: var(--dsw-alias-label-dimmed);
 }
@@ -268,6 +279,16 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* A section head that carries a control keeps the title's baseline and pushes
+   the control to the far edge, so the button lines up with the table below it. */
+.lg-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
 }
 
 .lg-empty {
@@ -568,6 +589,14 @@
 .lg-button--ghost:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
+}
+
+/* A head-row control: smaller than a form button, because it sits next to a
+   12px heading rather than among full-size fields. */
+.lg-button--small {
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 /* -------------------------------------------------------------- alarm card */

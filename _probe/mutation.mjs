@@ -1,4 +1,4 @@
-// Deliberately restore six known bugs, then prove the harnesses reject them.
+// Deliberately restore eight known bugs, then prove the harnesses reject them.
 // Always restore original bytes. Run only when nobody else is editing these files.
 //
 // The fourth mutation is the one that matters for the counting rule: dropping the share axis
@@ -15,6 +15,12 @@
 // from the saved list instead of from the switch. At the moment a user turns the rule on the
 // list is still empty, so the switch saves an empty list, the host echoes it back, and no box
 // ever appears — the feature looks broken and nothing in the code looks wrong.
+//
+// The seventh and eighth are the two that were just reported from the running screen: the dot
+// carrying its own label (6px wide, so the word spilled straight over the circle) and the clear
+// control wired to the per-hit dismissal. The last one matters most — `dismiss` treats a body
+// without `id` as an error, so a clear button that forgot `clearAll` would look right, click
+// fine, and clear nothing.
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
@@ -26,6 +32,8 @@ const mutations=[
   ['src/detect.js','qualifies: found.lines >= config.structLines && found.share >= config.structShare,','qualifies: found.lines >= config.structLines,','_probe/detect.mjs'],
   ['src/detect.js','if ((phrase.length * need) / span < CUSTOM_DENSITY) continue','if (false) continue','_probe/detect.mjs'],
   ['src/client.js','      wanted\n        ? h(','      phrases.length > 0\n        ? h(','_probe/render/mount.mjs'],
+  ['src/client.js',"h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }),", "h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }, t('label.live')),",'_probe/render/mount.mjs'],
+  ['src/client.js',"run('hits', { clearAll: true })","run('hits', { dismissed: true })",'_probe/render/mount.mjs'],
 ]
 for(const [file,from,to,test] of mutations){
   const path=new URL(file,root), before=await readFile(path)
@@ -45,4 +53,4 @@ for(const [file,from,to,test] of mutations){
     if(file.includes('client')) assert.equal(spawnSync(process.execPath,['scripts/build-client.mjs'],{cwd:root,stdio:'ignore'}).status,0)
   }
 }
-console.log('mutation: 6/6 checks passed; original files restored')
+console.log('mutation: 8/8 checks passed; original files restored')

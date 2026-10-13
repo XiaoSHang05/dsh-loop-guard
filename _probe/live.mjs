@@ -38,6 +38,16 @@ if (guard !== undefined) {
     text.length,
     'bytes',
   )
+
+  // `node _probe/live.mjs <substring> [substring ...]` asserts the served bytes
+  // contain markers. The build has been re-run many times while the page kept a
+  // cached copy, so "I changed the source" and "the browser is running it" are
+  // different claims; this is how the second one is checked.
+  const needles = process.argv.slice(2)
+  for (const needle of needles) {
+    console.log('served', JSON.stringify(needle), text.includes(needle) ? 'YES' : 'NO')
+  }
+  if (needles.length > 0 && needles.some((needle) => !text.includes(needle))) process.exitCode = 1
 }
 
 // The host half, on the one prefix this plugin registers.

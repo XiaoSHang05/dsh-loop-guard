@@ -1,5 +1,9 @@
 # 循环守卫 · dsh-loop-guard
 
+[![ci](https://github.com/XiaoSHang05/dsh-loop-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/XiaoSHang05/dsh-loop-guard/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/XiaoSHang05/dsh-loop-guard)](https://github.com/XiaoSHang05/dsh-loop-guard/releases/latest)
+[![license](https://img.shields.io/github/license/XiaoSHang05/dsh-loop-guard)](https://github.com/XiaoSHang05/dsh-loop-guard/blob/main/LICENSE)
+
 ### 🐋 还在担心你的大鲸鱼偷吃你的米饭吗？
 
 > 装上它 —— 大鲸鱼刚把同一句话嚼到第二遍，**碗就被端走了**。

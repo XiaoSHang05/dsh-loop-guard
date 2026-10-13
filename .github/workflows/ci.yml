@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` 需要 package-lock.json 与 package.json 严格对齐；对不齐就当场失败，
+      # 这本身就是一条检查。
+      - name: Install
+        run: npm ci
+
+      # 生成的 lib/client.js 必须与 src 逐字节一致。改了 src 忘了重新生成，
+      # 这里就会红——否则发出去的是「源文件写着修好了、用户装的还是旧行为」。
+      - name: Generated artifact is fresh
+        run: |
+          node scripts/build-client.mjs
+          if [ -n "$(git status --porcelain lib/)" ]; then
+            echo "::error::lib/client.js is stale — run: node scripts/build-client.mjs"
+            git --no-pager diff --stat lib/
+            exit 1
+          fi
+
+      # 静态检查：产物新鲜度、禁用 JSX、禁用 alert/confirm/prompt、路由表与实现对齐、
+      # 禁止把本机路径写进仓库（_probe/env.mjs 是唯一豁免）。
+      - name: Checks
+        run: node scripts/check.mjs
+
+      # 八个测试台：检测规则、宿主路由、流订阅、端到端回合、前端 store、契约解码、挂载。
+      - name: Tests
+        run: node scripts/test.mjs
+
+      # 变异台：故意往源码里塞 8 个 bug（含一个「按钮点得动但什么也没做」的隐形失效），
+      # 每一个都必须被某个台子当场抓住。抓不住说明台子本身是摆设。
+      - name: Mutation harness
+        run: node _probe/mutation.mjs
+
+      # 发布前最后一关：整个 git 历史里不许出现本机路径、用户名、真实会话 id。
+      # 工作区扫描在 check.mjs 里；这里扫的是历史，因为历史也会随仓库一起被克隆走。
+      - name: History needle scan
+        run: |
+          git log --all -p --no-color > "$RUNNER_TEMP/history.txt"
+          node _probe/history-scan.mjs "$RUNNER_TEMP/history.txt"
+
+      # 打包白名单里的每个文件都真的存在、能复制、且复制后逐字节相同。
+      - name: Packaging whitelist
+        run: node scripts/pack.mjs "$RUNNER_TEMP/packaged"

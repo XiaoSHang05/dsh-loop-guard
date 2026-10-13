@@ -10,13 +10,15 @@ const out=resolve(process.argv[2]||join(root,'..','交付',pkg.name+'-'+pkg.vers
 try {await lstat(out);throw new Error('destination already exists: '+out)} catch(error) {if(error.code!=='ENOENT')throw error}
 const files=[
   'package.json','package-lock.json','cordis.patch.yml','.gitattributes',
-  'README.md','LICENSE','CONTRACT.md','VALIDATION.md','CHANGELOG.md','CONTRIBUTING.md',
+  'README.md','LICENSE','CONTRACT.md','VALIDATION.md','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md',
   'src/index.js','src/detect.js','src/client.js','src/client.css','lib/client.js',
   'scripts/build-client.mjs','scripts/check.mjs','scripts/test.mjs','scripts/pack.mjs',
-  '_probe/detect.mjs','_probe/mutation.mjs','_probe/history-scan.mjs',
+  '_probe/detect.mjs','_probe/mutation.mjs','_probe/env.mjs','_probe/history-scan.mjs',
+  '_probe/struct-real-fp.mjs','_probe/live.mjs',
   '_probe/host/fixture.mjs','_probe/host/routes.mjs','_probe/host/stream.mjs','_probe/host/repl.mjs',
   '_probe/client/load.mjs','_probe/client/alarm.mjs','_probe/client/stream.mjs',
   '_probe/contract/wire.mjs','_probe/render/mount.mjs','_probe/render/package.json',
+  '.github/workflows/ci.yml',
 ]
 for(const file of files) {
   const info=await lstat(join(root,file))

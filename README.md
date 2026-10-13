@@ -4,11 +4,9 @@
 
 > 装上它 —— 大鲸鱼刚把同一句话嚼到第二遍，**碗就被端走了**。
 
-| 报警卡片 | 监控页 |
+| 报警测试 | 监控界面 |
 | :---: | :---: |
-| ![报警卡片](docs/images/alarm.png) | ![监控页](docs/images/panel.png) |
-
-![监控页设置](docs/images/settings.png)
+| ![报警测试](docs/images/alarm-test.png) | ![监控界面](docs/images/monitor.png) |
 
 | 卖点 | 说明 |
 | --- | --- |

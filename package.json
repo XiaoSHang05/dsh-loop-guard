@@ -38,12 +38,15 @@
     "README.md",
     "LICENSE",
     "CONTRACT.md",
-    "VALIDATION.md"
+    "VALIDATION.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "check": "node scripts/check.mjs",
-    "test": "node scripts/check.mjs && node scripts/test.mjs"
+    "test": "node scripts/check.mjs && node scripts/test.mjs",
+    "pack": "node scripts/pack.mjs"
   },
   "dsh": {
     "manifestVersion": 1,
@@ -63,6 +66,12 @@
   },
   "peerDependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "jsdom": "^30.1.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "engines": {
     "dsh": ">=0.2.0-0 <0.3.0"

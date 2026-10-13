@@ -9,11 +9,12 @@ const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'))
 const out=resolve(process.argv[2]||join(root,'..','交付',pkg.name+'-'+pkg.version))
 try {await lstat(out);throw new Error('destination already exists: '+out)} catch(error) {if(error.code!=='ENOENT')throw error}
 const files=[
-  'package.json','cordis.patch.yml','README.md','LICENSE','CONTRACT.md','VALIDATION.md',
+  'package.json','package-lock.json','cordis.patch.yml','.gitattributes',
+  'README.md','LICENSE','CONTRACT.md','VALIDATION.md','CHANGELOG.md','CONTRIBUTING.md',
   'src/index.js','src/detect.js','src/client.js','src/client.css','lib/client.js',
   'scripts/build-client.mjs','scripts/check.mjs','scripts/test.mjs','scripts/pack.mjs',
   '_probe/detect.mjs','_probe/mutation.mjs',
-  '_probe/host/fixture.mjs','_probe/host/routes.mjs','_probe/host/stream.mjs',
+  '_probe/host/fixture.mjs','_probe/host/routes.mjs','_probe/host/stream.mjs','_probe/host/repl.mjs',
   '_probe/client/load.mjs','_probe/client/alarm.mjs','_probe/client/stream.mjs',
   '_probe/contract/wire.mjs','_probe/render/mount.mjs','_probe/render/package.json',
 ]

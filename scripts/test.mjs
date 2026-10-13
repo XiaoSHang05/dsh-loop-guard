@@ -25,6 +25,7 @@ const HARNESSES = [
   ['detect: core rules', '_probe/detect.mjs'],
   ['host: routes', '_probe/host/routes.mjs'],
   ['host: stream', '_probe/host/stream.mjs'],
+  ['host: one turn end to end', '_probe/host/repl.mjs'],
   ['client: store + alarm', '_probe/client/alarm.mjs'],
   ['client: store + stream', '_probe/client/stream.mjs'],
   ['contract: wire', '_probe/contract/wire.mjs'],

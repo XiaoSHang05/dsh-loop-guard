@@ -1,10 +1,10 @@
 // Where this machine's DSH lives, derived rather than written down.
 //
-// The probes used to hard-code `C:/Users/<username>/.dsh` and `127.0.0.1:19387`.
-// That works on exactly one computer: anyone who clones this repository gets a
-// probe suite that cannot authenticate, and the failure looks like "the host is
-// down" rather than "this path is someone else's". The harnesses are part of
-// what this repository ships, so they have to work where the reader is.
+// The probes used to hard-code one machine's home directory and one fixed
+// port. That works on exactly one computer: anyone who clones this repository
+// gets a probe suite that cannot authenticate, and the failure looks like "the
+// host is down" rather than "this path is someone else's". The harnesses are
+// part of what this repository ships, so they have to work where the reader is.
 //
 // Every value has an environment variable that DSH itself sets, and a fallback
 // derived from the platform rather than assumed. The one thing that cannot be

@@ -96,17 +96,17 @@ agent.cancel(
 
 ## 开发与测试（完整源码目录）
 
-交付文件夹包含源码、构建脚本和测试脚本，但不携带 node_modules、浏览器个人配置、凭据或 DSH 会话日志。测试的 React/jsdom 依赖声明在 `_probe/render/package.json`，需要先安装其开发依赖；运行宿主测试也需要可解析的 Schemastery。
+交付文件夹与 GitHub 仓库包含源码、构建脚本和测试脚本，但**不携带 node_modules**。测试用的 React、jsdom 与 Schemastery 已声明为开发依赖，clone 之后先装一次：
 
-```powershell
-node scripts/build-client.mjs
-node scripts/check.mjs
-node scripts/test.mjs
+```bash
+npm install          # 装 jsdom / react / react-dom / @deepseek-ai/schemastery
+npm run build        # 由 src/client.js + src/client.css 重建 lib/client.js
+npm test             # 静态校验 + 七组测试台
 node _probe/mutation.mjs
 ```
 
-七组测试覆盖检测核心、宿主路由、流订阅、客户端报警/推送、跨半契约和真实 React/jsdom 挂载。变异台会临时改写四个源码位置并在 finally 中恢复，**不要与其他编辑或构建并行运行**；它专门证明台子能抓到 bug（把已知 bug 放回去必须变红），而不是只证明代码今天能跑。
+`npm test` 会先跑 `scripts/check.mjs`（产物新鲜度、语法、越权能力、颜色、清单路径、机器相关路径），再跑八组测试台，共 232 个断言。变异台会临时改写八处源码并在 `finally` 中恢复，**不要与其他编辑或构建并行运行**；它专门证明台子能抓到 bug（把已知 bug 放回去必须变红），而不是只证明代码今天能跑。
 
-`_probe/` 下另有一组语料探针（`struct-*.mjs`、`cycle-sample.mjs`），把本机 DSH 会话日志里的全部 assistant 消息重放给真实检测器，用来测误报率。它们需要本机的会话日志，换台机器会得到不同数字——阈值就是这么定的，方法写在文件头。
+回放语料用的探针（`_probe/struct-real-fp.mjs`）读取本机 DSH 会话日志，把全部 assistant 消息重放给真实检测器。它需要本机的会话日志，**换一台机器会得到不同数字**——编号循环的阈值就是这么定的，方法与数字写在 `VALIDATION.md`。
 
-MIT，见 LICENSE。
+MIT，见 LICENSE。改动记录见 `CHANGELOG.md`。

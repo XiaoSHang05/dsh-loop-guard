@@ -79,14 +79,23 @@ const FOOTER = `    var api = createLoopGuardClient(React, __css, require);
  * Render the artifact. The CSS is embedded as a JSON string literal so a
  * stylesheet containing quotes, backslashes or newlines cannot break out of
  * the generated source.
+ *
+ * Both halves are normalized to LF before embedding. This is not cosmetic: the
+ * artifact is a *generated* file, and `scripts/check.mjs` asserts that it
+ * contains `src/client.js` verbatim. On Windows with git's default
+ * `core.autocrlf=true`, the checked-out source arrives with CRLF while the
+ * generated head is written with LF, so the embed stopped matching and a fresh
+ * clone failed `npm run check` with `lib/client.js is stale` — before anyone
+ * had edited anything. `.gitattributes` pins the repository to LF; this keeps
+ * the build correct even in a checkout that predates that file or ignores it.
  */
 async function render() {
   const [source, css] = await Promise.all([readFile(SOURCE, 'utf8'), readFile(STYLE, 'utf8')])
   return [
     HEADER,
-    `    var __css = ${JSON.stringify(css)};\n`,
+    `    var __css = ${JSON.stringify(css.replaceAll('\r\n', '\n'))};\n`,
     '\n/* ---------------------------------------------------------------- source */\n\n',
-    source,
+    source.replaceAll('\r\n', '\n'),
     '\n\n/* ------------------------------------------------------------------ boot */\n',
     FOOTER,
   ].join('')

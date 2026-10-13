@@ -1,1 +1,7 @@
-{"name":"lg-render-probe","private":true,"type":"module","description":"Dev-only: the DOM the render bench mounts into. Not part of the published package.","dependencies":{"jsdom":"^30.1.2","react":"^18.3.1","react-dom":"^18.3.1"}}
+{
+  "name": "lg-render-probe",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only anchor: `_probe/host/repl.mjs` calls createRequire on this file so both benches resolve jsdom, react and react-dom from the same place. The versions live in the root package.json devDependencies and nowhere else — a second manifest with its own versions is how two benches end up running on two different jsdoms.",
+  "//": "No dependencies here on purpose. `npm install` at the repository root installs everything the benches need."
+}

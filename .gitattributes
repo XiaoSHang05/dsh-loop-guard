@@ -1,0 +1,27 @@
+# Line endings, pinned on purpose.
+#
+# This repository shipped without this file, and that was a real bug rather
+# than a style preference: `lib/client.js` is a *generated* file that embeds
+# `src/client.js` verbatim as a string, and `scripts/check.mjs` asserts the
+# embed is byte-identical to the source. On a machine with git's default
+# `core.autocrlf=true` (the Git for Windows default), checkout rewrote every
+# LF to CRLF, so the embedded copy no longer matched what the check read from
+# `src/client.js` — and a fresh clone failed `npm run check` with
+# `lib/client.js is stale` before anyone had edited a line.
+#
+# The fix is to stop git from translating at all. LF everywhere, on every
+# platform, in the repository and in the working tree. Unix line endings are
+# what Node, npm and every bundler in this ecosystem expect, and a repository
+# that cannot build after `git clone` has no business being public.
+* text=auto eol=lf
+
+# Windows-only binaries, if any are ever added, must not be touched.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Git's own housekeeping files.
+.gitattributes text eol=lf
+.gitignore text eol=lf

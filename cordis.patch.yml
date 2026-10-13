@@ -53,6 +53,14 @@
         # listening` x20) also fires — see README 「已知边界」.
         structLines: 12
         structShare: 0.6
+        # Fourth detector: sentences the user types in themselves, one per line.
+        # Off by default and off while empty — different models stall on
+        # different sentences, so this is the escape hatch for whatever the
+        # three derived rules above do not happen to catch. Turn it on in the
+        # 监控 tab; editing this list here is the same as editing it there.
+        customPhrases: []
+        # How many copies of one of those phrases count as a loop.
+        customRepeat: 5
         # Cancel the turn when a loop is caught. Off makes this an alarm-only
         # build without editing any code.
         cancel: true

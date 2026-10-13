@@ -197,6 +197,61 @@
   cursor: default;
 }
 
+/* ------------------------------------------------------- the user's phrases */
+
+/*
+ * The phrase box and its one number.
+ *
+ * The textarea is the whole point of the panel, so it gets the width and the monospace
+ * face: phrases are matched character for character, and a proportional face makes two
+ * phrases that differ by a space look identical on screen.
+ */
+.lg-phrases {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lg-phrases-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 72px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-bg-base);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lg-phrases-input:hover:not(:disabled) {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.lg-phrases-input:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
+  outline-offset: 1px;
+}
+
+.lg-phrases-input:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  cursor: default;
+}
+
+.lg-phrases-foot {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.lg-phrases-off {
+  margin: 0;
+}
+
 /* ---------------------------------------------------------------- sections */
 
 .lg-section {

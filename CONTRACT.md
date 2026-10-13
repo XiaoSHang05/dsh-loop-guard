@@ -42,6 +42,8 @@ export const DEFAULTS = {
   densityRatio: 0.75,  // share of those lines that must be duplicates
   structLines: 12,     // consecutive lines sharing one skeleton, third detector (0 = off)
   structShare: 0.6,    // letters / (letters + digits) across that run
+  customPhrases: [],   // the user's own phrases, fourth detector ([] = off)
+  customRepeat: 5,     // copies of one of those phrases that count as a loop
 }
 
 export function createDetector(options)  // -> detector
@@ -53,9 +55,9 @@ Returns `null`, or on the first hit of a loop:
 ```js
 {
   stream: 'thinking' | 'text',
-  kind: 'cycle' | 'density' | 'struct',
-  unit: string,      // cycle: word-aligned; density: normalized line in original order; struct: the run's first line; <= 120 chars
-  repeats: number,   // cycle: contiguous copies; density: duplicate lines; struct: lines in the run
+  kind: 'cycle' | 'custom' | 'density' | 'struct',
+  unit: string,      // cycle: word-aligned; density: normalized line in original order; struct: the run's first line; custom: the phrase itself; <= 120 chars
+  repeats: number,   // cycle: contiguous copies; density: duplicate lines; struct: lines in the run; custom: occurrences inside the window
   at: number,        // Date.now() at detection
 }
 ```
@@ -85,9 +87,13 @@ Rules the core guarantees (and the harness must prove):
 4. Ordering: `text` and `thinking` are independent; a loop in one does not mask the other.
 5. `snapshot()[stream].score` is clamped to `[0, 1]` and reaches exactly `1` at the hit. A loop
    that runs 400 copies does not report a score of 400.
-6. Detector order is `cycle`, then `struct`, then `density`: a verbatim loop is never reported
-   as the vaguer signal it would also match, and a counting loop outranks the line-density
-   signal it is a special case of. Only the first qualifying detector in that order is asked.
+6. Detector order is `cycle`, then `custom`, then `struct`, then `density`: a verbatim loop is
+   never reported as the vaguer signal it would also match, a counting loop outranks the
+   line-density signal it is a special case of, and the user's own phrase loses to a verbatim
+   loop (which is a strictly stronger statement about the same text) but wins over the derived
+   shape rules, because a phrase the user typed is a claim about what *this* model does and the
+   derived shapes are guesses about what a model might do. Only the first qualifying detector in
+   that order is asked.
 7. The skeleton rule (`kind: 'struct'`) is about a *shape*: consecutive lines whose numbers are
    blanked are identical, for at least `structLines` lines, and across that run at least
    `structShare` of the letters-plus-digits are letters. It exists because a counting loop
@@ -101,6 +107,14 @@ Rules the core guarantees (and the harness must prove):
    choice is to fire on both or neither; firing on a long enumeration costs one dismissible
    alarm, not firing on the loop costs the turn. Callers who disagree use `structLines: 0` or a
    higher line count.
+9. The custom-phrase rule (`kind: 'custom'`) watches phrases the user typed, one per line, at
+   least two characters each. It fires when one phrase occurs `customRepeat` times inside a span
+   no longer than four times the text those copies occupy (`phrases × repetitions`), so ordinary
+   prose that mentions a phrase a few times does not fire no matter how long the text is. An
+   empty list is the off switch, and it is the default: the rule does nothing until a user turns
+   it on and fills it in. Duplicates and sub-two-character entries are dropped rather than
+   rejected, on both halves, so the box the user sees and the list being matched are the same
+   list.
 
 ## HTTP surface (host half)
 
@@ -131,6 +145,8 @@ Status codes: `400` bad body, `404` unknown action, `405` wrong method, `503` no
   densityRatio: 0.75,
   structLines: 12,        // 0 = counting-loop rule off
   structShare: 0.6,
+  customPhrases: [],      // [] = the user's own phrase rule off (the default)
+  customRepeat: 5,        // copies of one of those phrases that count as a loop
   cancel: true,           // false = alarm only, never interrupt
   alarm: true,            // false = no card
   sound: true,            // false = silent card

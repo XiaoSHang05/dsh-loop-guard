@@ -88,6 +88,8 @@ const DEFAULT_CONFIG = {
   densityRatio: DEFAULTS.densityRatio,        // 这些行里重复行要占多大比例
   structLines: DEFAULTS.structLines,          // 第三个检测器：同骨架连续几行
   structShare: DEFAULTS.structShare,          // 这些行里字母要占多大比例
+  customPhrases: [...DEFAULTS.customPhrases], // 用户自己填的短语；空数组 = 这条规则不工作
+  customRepeat: DEFAULTS.customRepeat,        // 自己填的短语出现几遍算循环
   cancel: true,                               // false = 只报警，永不打断
   alarm: true,                                // false = 不弹卡片
   sound: true,                                // false = 卡片静音
@@ -110,10 +112,22 @@ const CONFIG_FIELDS = {
   densityRatio: { kind: 'number', min: 0, max: 1 },
   structLines: { kind: 'integer', min: 0, max: 200 },
   structShare: { kind: 'number', min: 0, max: 1 },
+  customPhrases: { kind: 'phrases', max: 50, maxLength: 200 },
+  customRepeat: { kind: 'integer', min: 2, max: 100 },
   cancel: { kind: 'boolean' },
   alarm: { kind: 'boolean' },
   sound: { kind: 'boolean' },
   scopeDefault: { kind: 'scope', values: ['all', 'selected'] },
+}
+
+/**
+ * 一条自定义短语能不能用。
+ *
+ * 单字符短语不是短语，是子串：`a` 在任何一段英文里都能凑够阈值，把整条规则变成常亮。
+ * 所以最短两个字符，并且不许是纯空白——空白的重复不叫复读，叫缩进。
+ */
+function usablePhrase(value) {
+  return typeof value === 'string' && value.trim().length >= 2
 }
 
 // Editable fields must be volatile: settings.update persists them without
@@ -123,6 +137,7 @@ export const Config = Schema.object(Object.fromEntries(
     let schema
     if (field.kind === 'boolean') schema = Schema.boolean()
     else if (field.kind === 'scope') schema = Schema.union(field.values.map(value => Schema.const(value)))
+    else if (field.kind === 'phrases') schema = Schema.array(Schema.string()).default([...DEFAULT_CONFIG[key]])
     else {
       schema = Schema.number().min(field.min).max(field.max)
       if (field.kind === 'integer') schema = schema.step(1)
@@ -242,6 +257,24 @@ function cleanConfigPatch(patch, base = DEFAULT_CONFIG) {
       clean[key] = raw
       continue
     }
+    if (field.kind === 'phrases') {
+      if (!Array.isArray(raw)) throw badRequest(`${key} must be an array of strings`)
+      if (raw.length > field.max) throw badRequest(`${key} holds at most ${field.max} phrases`)
+      // Filtered rather than rejected: a phrase that is too short to mean anything is dropped
+      // so a blank line pasted in from a notes file does not 400 the whole save. Anything that
+      // is not a string at all is a client bug, and that is worth failing loudly.
+      const phrases = []
+      for (const item of raw) {
+        if (typeof item !== 'string') throw badRequest(`${key} must hold only strings`)
+        if (item.length > field.maxLength) {
+          throw badRequest(`${key} entries must be at most ${field.maxLength} characters`)
+        }
+        if (!usablePhrase(item)) continue
+        if (!phrases.includes(item)) phrases.push(item)
+      }
+      clean[key] = phrases
+      continue
+    }
     if (typeof raw !== 'number' || !Number.isFinite(raw)) {
       throw badRequest(`${key} must be a finite number`)
     }
@@ -273,6 +306,8 @@ function detectorOptions(config) {
     densityRatio: config.densityRatio,
     structLines: config.structLines,
     structShare: config.structShare,
+    customPhrases: config.customPhrases,
+    customRepeat: config.customRepeat,
   }
 }
 

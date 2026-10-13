@@ -164,6 +164,102 @@ loud('a loop that starts mid-buffer is caught',
     'text', 'struct')
 }
 
+/* ---------------------------------------------------------- the user's own phrases */
+
+{
+  /*
+   * A phrase the user typed, caught without being a verbatim loop.
+   *
+   * The point of this rule is the case no shape rule can reach: some models get stuck on a
+   * sentence that is particular to them. The fixture below is deliberately *not* periodic —
+   * every line says something different after the phrase — so `cycle` cannot see it and
+   * `struct` cannot either (six lines, and the skeletons all differ). If this fires, it fired
+   * because the user said what to look for.
+   */
+  const PHRASE = 'I need to check the config file.'
+  const lines = [
+    PHRASE + ' The first place to look is the loader.',
+    PHRASE + ' Then the scheduler picks it up on the next tick.',
+    PHRASE + ' The cache is keyed by path, so a rename invalidates it.',
+    PHRASE + ' If the record is missing the validator rejects it outright.',
+    PHRASE + ' A quoted delimiter is the one case no fixture covers.',
+    PHRASE + ' Coverage is 84 percent and every new line is exercised.',
+  ].join('\n')
+
+  // Off by default, and the same text proves it: with no phrases configured this must stay
+  // quiet, or the feature would be a new source of false positives nobody asked for.
+  quiet('with no phrases configured the same text stays quiet', lines)
+
+  const on = createDetector({ customPhrases: [PHRASE] })
+  const hit = feed(on, 'text', lines, 5)
+  check('a configured phrase fires', hit !== null, 'stayed quiet')
+  check('it reports itself as a custom hit', hit !== null && hit.kind === 'custom',
+    hit === null ? undefined : 'kind=' + hit.kind)
+  check('it reports the phrase that matched', hit !== null && hit.unit === PHRASE,
+    hit === null ? undefined : JSON.stringify(hit.unit))
+  check('it counts the occurrences, not the lines', hit !== null && hit.repeats >= 5,
+    hit === null ? undefined : 'repeats=' + hit.repeats)
+
+  // The latch is shared by every rule: one loop, one alarm.
+  check('a custom loop alarms once', on.push('text', PHRASE + ' And again, and again.') === null)
+
+  // `customRepeat` is the one number the user tunes, and it is the only one that decides this.
+  const early = createDetector({ customPhrases: [PHRASE], customRepeat: 3 })
+  const sooner = feed(early, 'text', lines, 5)
+  check('a lower custom threshold fires earlier', sooner !== null && sooner.repeats <= 4,
+    sooner === null ? 'stayed quiet' : 'repeats=' + sooner.repeats)
+
+  // A phrase used the way prose uses a phrase is not a loop. Five mentions spread across an
+  // answer are as far apart as they are numerous, and the span they cover says so.
+  const scattered = [
+    PHRASE + ' The parser rejects CRLF because it splits before normalising the separator.',
+    'The scheduler runs on a fixed tick, so a slow handler delays every later job in the queue.',
+    PHRASE + ' The cache is keyed by absolute path, which makes a rename look like a miss.',
+    'The loader reads the manifest once at startup and never opens the file again after that.',
+    PHRASE + ' The validator reports the first missing field and stops, which hides the rest.',
+    'A quoted delimiter inside a string is the one case no fixture covers, so it is untested.',
+    PHRASE + ' Coverage moved from 81 to 84 percent and every new line is exercised by a case.',
+    'The renderer batches its writes, so a burst of updates costs one layout instead of many.',
+    PHRASE + ' The retry budget is three attempts with a short backoff between them, no more.',
+    'The logger truncates a long field rather than wrapping it, which keeps one record per line.',
+    'Nothing in this answer repeats except the phrase that starts five of its eleven lines.',
+  ].join('\n')
+  quiet('a phrase used the way prose uses a phrase is not a loop', scattered, 'text')
+  {
+    const d = createDetector({ customPhrases: [PHRASE] })
+    const fired = feed(d, 'text', scattered, 5)
+    check('the scattered mentions stay quiet with the phrase configured too', fired === null,
+      fired === null ? undefined : JSON.stringify(fired))
+  }
+
+  // A phrase too short to be a phrase is ignored rather than matched everywhere.
+  quiet('a one-character phrase is ignored', lines, 'text')
+  {
+    const d = createDetector({ customPhrases: ['a'], customRepeat: 2 })
+    check('a one-character phrase never fires', feed(d, 'text', lines, 5) === null)
+  }
+
+  // The bar is the user's own signal when they have one: it is the only signal they can see
+  // the cause of, because they typed it.
+  {
+    const d = createDetector({ customPhrases: [PHRASE], customRepeat: 20 })
+    feed(d, 'text', lines, 5)
+    const state = d.snapshot().text
+    check('the bar reports progress toward the user’s own threshold',
+      state.repeats >= 5 && state.score > 0 && state.score < 1,
+      'repeats=' + state.repeats + ' score=' + state.score)
+  }
+
+  // Turning it on later is a configuration change, not a restart.
+  {
+    const d = createDetector()
+    feed(d, 'text', lines, 5)
+    d.reset()
+    d.configure({ customPhrases: [PHRASE] })
+    check('configure can switch the rule on after the fact', feed(d, 'text', lines, 5) !== null)
+  }
+}
+
 {
   const detector = createDetector({ minRepeat: 50, checkEvery: 1 })
   const text = Array.from({ length: 10 }, (_, i) => i % 2 ? '  foo   bar  ' : 'foo bar').join('\n')

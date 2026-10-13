@@ -10,20 +10,26 @@
  * about DSH. Keeping it separate means the threshold tuning and the loop shape can be argued
  * about with plain strings, and the host half stays a thin adapter over a `push()` call.
  *
- * TWO DETECTORS, BECAUSE THERE ARE TWO WAYS TO STOP BEING NEW
+ * FOUR RULES, IN THE ORDER THEY ARE CONSULTED
  *
- * 1. `cycle` — verbatim repetition. The model emits the same unit contiguously: the same
+ * 1. `custom` — a phrase the user typed. Some models get stuck on a sentence this file has no
+ *    reason to know, and a list of phrases is the only rule that can be told what to look for.
+ *    It runs first because a human asked for it by name.
+ *
+ * 2. `cycle` — verbatim repetition. The model emits the same unit contiguously: the same
  *    sentence, the same list item, the same paragraph, until the token ceiling. This is the
  *    failure the user described ("Let me go. Let me go. ... 100 times").
  *
- * 2. `density` — repeated lines separated by other text or varying whitespace.
- *    Lines are compared after whitespace normalization, but digits remain content:
- *    a numeric table must not be mistaken for a runaway counter. This conservative
- *    detector does not diagnose loops whose only changes are increasing counters.
+ * 3. `struct` — a counting loop: one sentence shape with a fresh number glued on each line.
+ *    `第 1 步：读取完成。` and `第 2 步：读取完成。` are different strings and different lines,
+ *    so neither rule above sees them; blanking the digits makes them one skeleton.
  *
- * The cycle detector runs first because it is the cheaper and more specific signal; density
- * is consulted only when no cycle was found, so a genuine loop is never reported as a
- * vaguer one.
+ * 4. `density` — repeated lines separated by other text or varying whitespace.
+ *    Lines are compared after whitespace normalization, but digits remain content:
+ *    a numeric table must not be mistaken for a runaway counter.
+ *
+ * The order is by specificity, and a rule is consulted only when the ones before it found
+ * nothing: a genuine loop is never reported as a vaguer one.
  */
 
 export const DEFAULTS = {
@@ -36,6 +42,10 @@ export const DEFAULTS = {
   densityRatio: 0.75,
   structLines: 12,
   structShare: 0.6,
+  // Off by default, and empty: this rule exists to be told what to look for, so a default
+  // phrase would be this file guessing. An empty list costs one length check per scan.
+  customPhrases: [],
+  customRepeat: 5,
 }
 
 /** The two streams are watched independently: a loop in thinking must not hide one in text. */
@@ -242,6 +252,72 @@ function scanSkeleton(text, config) {
 }
 
 /**
+ * Share of a span that must be the phrase itself for its occurrences to read as a loop.
+ *
+ * A loop is the phrase with a little between it: five copies of `Let me go. ` back to back fill
+ * their span completely. Five mentions of the same phrase spread across an answer fill almost
+ * none of it. This ratio is what separates the two, and it is derived rather than configured so
+ * the user has one number to understand instead of two.
+ */
+const CUSTOM_DENSITY = 0.25
+
+/**
+ * How many occurrences of one phrase are collected before the scan stops looking.
+ *
+ * A two-character phrase in an 8 KB window can occur thousands of times; the count is reported
+ * to a human, and nobody reads a number that large. The cap is also what bounds the cost of
+ * this rule on pathological input.
+ */
+const CUSTOM_MAX_HITS = 200
+
+/**
+ * The first custom phrase that has repeated enough, and how many times it was said.
+ *
+ * `{ phrase, count, qualifies }`. A phrase is a string the user typed, so this rule can look
+ * for something no shape-based rule could derive — some models get stuck on a sentence that is
+ * particular to them.
+ *
+ * The count is over the whole window rather than the last `customRepeat` of them, because the
+ * question a person asks about a loop is "how many times did it say this", and the window is
+ * what bounds the answer. Whether those occurrences are a loop or merely a phrase used often is
+ * decided by how densely they pack their span, not by how many there are.
+ */
+function scanCustom(text, config) {
+  const phrases = config.customPhrases
+  const need = config.customRepeat
+  if (!Array.isArray(phrases) || phrases.length === 0 || !(need >= 2)) {
+    return { phrase: '', count: 0, qualifies: false }
+  }
+
+  let best = { phrase: '', count: 0, qualifies: false }
+
+  for (const raw of phrases) {
+    const phrase = typeof raw === 'string' ? raw : ''
+    if (phrase.length < 2) continue
+
+    const hits = []
+    let at = text.indexOf(phrase)
+    while (at !== -1 && hits.length < CUSTOM_MAX_HITS) {
+      hits.push(at)
+      at = text.indexOf(phrase, at + phrase.length)
+    }
+    if (hits.length > best.count) best = { phrase, count: hits.length, qualifies: false }
+    if (hits.length < need) continue
+
+    // The last `need` occurrences are the ones that decide it: a phrase mentioned a few times
+    // early in the window and then looped would be judged by its sparse beginning if the first
+    // `need` were used instead, and the loop would be missed.
+    const tail = hits.slice(-need)
+    const span = tail[tail.length - 1] + phrase.length - tail[0]
+    if ((phrase.length * need) / span < CUSTOM_DENSITY) continue
+
+    return { phrase, count: hits.length, qualifies: true }
+  }
+
+  return best
+}
+
+/**
  * How many positions at the end of `text` satisfy `text[i] === text[i - period]`.
  *
  * For a unit repeated k times contiguously, this is exactly (k - 1) * period, so the copy
@@ -357,6 +433,20 @@ export function createDetector(options) {
       return { stream, kind: 'cycle', unit: displayUnit(cycle.unit), repeats: cycle.repeats, at: Date.now() }
     }
 
+    // The user's own phrases, asked after the derived cycle and before the shape rules. A
+    // phrase the user typed is a statement about what this model does — it is more specific
+    // than any shape this file could derive, but it is not more specific than a verbatim loop,
+    // which is why it comes second.
+    const custom = scanCustom(text, config)
+    const customScore = config.customRepeat <= 0 ? 0 : Math.min(custom.count / config.customRepeat, 1)
+
+    if (custom.qualifies) {
+      latest[stream] = { repeats: custom.count, unit: shorten(custom.phrase), score: 1 }
+      if (latched[stream]) return null
+      latched[stream] = true
+      return { stream, kind: 'custom', unit: shorten(custom.phrase), repeats: custom.count, at: Date.now() }
+    }
+
     // Only asked when no cycle was found, so a verbatim loop is never downgraded to the
     // vaguer signal it would also match.
     const density = scanDensity(text, config)
@@ -401,7 +491,13 @@ export function createDetector(options) {
     // every idle session at 1/structLines and put `repeats: 1` on the wire for prose that
     // repeats nothing. Two adjacent lines sharing a skeleton is the first moment there is
     // anything to show.
-    if (struct.lines >= 2 && structScore >= ratio && structScore >= cycleScore) {
+    // The user's own rule is offered to the bar first when it is configured, because it is the
+    // one signal the user can see the cause of: they typed the phrase, so a bar driven by it is
+    // a bar they can explain. A positive score already implies the list was a non-empty array
+    // of usable phrases, so this reads the scan's own answer rather than re-inspecting config.
+    if (customScore > 0 && customScore >= ratio && customScore >= cycleScore && customScore >= structScore) {
+      latest[stream] = { repeats: custom.count, unit: '', score: customScore }
+    } else if (struct.lines >= 2 && structScore >= ratio && structScore >= cycleScore) {
       latest[stream] = { repeats: struct.lines, unit: '', score: structScore }
     } else if (ratio >= cycleScore) {
       latest[stream] = { repeats: density.duplicates, unit: '', score: Math.min(ratio, 1) }

@@ -1,10 +1,20 @@
-// Deliberately restore four known bugs, then prove the harnesses reject them.
+// Deliberately restore six known bugs, then prove the harnesses reject them.
 // Always restore original bytes. Run only when nobody else is editing these files.
 //
 // The fourth mutation is the one that matters for the counting rule: dropping the share axis
 // leaves a rule that fires on any twelve same-shaped lines, which is exactly the file-listing
 // false positive that axis exists to prevent. If the negative cases in `_probe/detect.mjs` do
 // not reject it, they are decoration.
+//
+// The fifth drops the density test from the custom-phrase rule, leaving "count the occurrences".
+// That version fires on any phrase a user lists and then uses normally — the prose case in the
+// same harness — so it is the mutation that proves the rule is about looping rather than about
+// the phrase merely appearing.
+//
+// The sixth is the bug that was actually written first: deriving the phrase box's visibility
+// from the saved list instead of from the switch. At the moment a user turns the rule on the
+// list is still empty, so the switch saves an empty list, the host echoes it back, and no box
+// ever appears — the feature looks broken and nothing in the code looks wrong.
 import assert from 'node:assert/strict'
 import { readFile, writeFile } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
@@ -14,10 +24,16 @@ const mutations=[
   ['src/detect.js',"return line.trim().replace(/\\s+/gu, ' ')","return line.trim().replace(/\\s+/gu, ' ').replace(/\\d+/gu, '#')",'_probe/detect.mjs'],
   ['src/client.js','if (started) return','if (false) return','_probe/render/mount.mjs'],
   ['src/detect.js','qualifies: found.lines >= config.structLines && found.share >= config.structShare,','qualifies: found.lines >= config.structLines,','_probe/detect.mjs'],
+  ['src/detect.js','if ((phrase.length * need) / span < CUSTOM_DENSITY) continue','if (false) continue','_probe/detect.mjs'],
+  ['src/client.js','      wanted\n        ? h(','      phrases.length > 0\n        ? h(','_probe/render/mount.mjs'],
 ]
 for(const [file,from,to,test] of mutations){
   const path=new URL(file,root), before=await readFile(path)
-  const text=before.toString('utf8');assert.equal(text.split(from).length,2,'mutation matches once: '+file)
+  // Match against LF-normalised text: these files are CRLF on Windows and LF elsewhere, and a
+  // pattern with a hard-coded "\r\n" would silently stop matching on a clone — the mutation
+  // would then never be applied, the harness would pass, and the run would report success.
+  const text=before.toString('utf8').replaceAll('\r\n','\n')
+  assert.equal(text.split(from).length,2,'mutation matches once: '+file)
   try {
     await writeFile(path,text.replace(from,to))
     if(file.includes('client')) assert.equal(spawnSync(process.execPath,['scripts/build-client.mjs'],{cwd:root,stdio:'ignore'}).status,0)
@@ -29,4 +45,4 @@ for(const [file,from,to,test] of mutations){
     if(file.includes('client')) assert.equal(spawnSync(process.execPath,['scripts/build-client.mjs'],{cwd:root,stdio:'ignore'}).status,0)
   }
 }
-console.log('mutation: 4/4 checks passed; original files restored')
+console.log('mutation: 6/6 checks passed; original files restored')

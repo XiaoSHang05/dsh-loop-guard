@@ -101,6 +101,16 @@ function createLoopGuardClient(React, css, require_) {
   var THRESHOLD_SHARE = { min: 0.4, max: 1, step: 0.05 }
 
   /**
+   * The range of the custom phrase threshold.
+   *
+   * Two is the floor because one occurrence is not a repetition. The ceiling is lower than
+   * `THRESHOLD_REPEAT`'s on purpose: a phrase the user typed by hand is a deliberate
+   * statement about one model, so waiting twenty copies before saying anything wastes the
+   * whole reason for typing it.
+   */
+  var CUSTOM_REPEAT = { min: 2, max: 20, step: 1 }
+
+  /**
    * Alarm tone, in Hz and milliseconds.
    *
    * Three rising blips rather than one long note: a single tone is
@@ -128,6 +138,13 @@ function createLoopGuardClient(React, css, require_) {
     'label.densityRatioHint': '最近几行里有多少是重复行。',
     'label.structShare': '编号循环占比',
     'label.structShareHint': '同一句式连着出现时，行里字母要占多大比例才算循环（表格和坐标清单会被这一条挡住）。',
+    'label.custom': '自定义短语',
+    'label.customHint': '盯住你自己写的几句话。默认关闭：只有打开并填入内容后这条规则才工作。',
+    'label.customOff': '未启用。上面打开后可以填入要盯的句子。',
+    'label.customPlaceholder': '一行一句，例如：Let me go.',
+    'label.customNote': '按行匹配，至少两个字。句子被反复连写时报警；正常行文里提到几次不算。',
+    'label.customRepeat': '自定义短语次数',
+    'label.customRepeatHint': '你自己填的句子出现几次算循环。',
     'label.sessions': '会话',
     'label.hits': '命中历史',
     'label.unit': '重复内容',
@@ -153,6 +170,7 @@ function createLoopGuardClient(React, css, require_) {
     'kind.cycle': '逐字重复',
     'kind.density': '近似重复',
     'kind.struct': '编号循环',
+    'kind.custom': '自定义短语',
     'status.unavailable': '监控服务不可用',
     'status.unavailableHint': '宿主半没有挂载 /dsh-loop-guard/api，这个 profile 里没有加载 dsh-loop-guard。',
     'status.disabled': '监控已关闭',
@@ -187,6 +205,13 @@ function createLoopGuardClient(React, css, require_) {
     'label.densityRatioHint': 'What share of the recent lines must be duplicates.',
     'label.structShare': 'Counting-loop share',
     'label.structShareHint': 'When one sentence shape repeats line after line, how much of it must be words — this is what keeps tables and coordinate dumps out.',
+    'label.custom': 'Your own phrases',
+    'label.customHint': 'Watch for sentences you write down yourself. Off by default: the rule does nothing until you turn it on and fill it in.',
+    'label.customOff': 'Not enabled. Turn the switch on above to type the sentences to watch for.',
+    'label.customPlaceholder': 'One phrase per line, for example: Let me go.',
+    'label.customNote': 'Matched per line, at least two characters. Alarms when a phrase is written over and over; a few mentions in ordinary prose do not count.',
+    'label.customRepeat': 'Phrase repeats',
+    'label.customRepeatHint': 'How many copies of your own phrase count as a loop.',
     'label.sessions': 'Sessions',
     'label.hits': 'Hit history',
     'label.unit': 'Repeated text',
@@ -212,6 +237,7 @@ function createLoopGuardClient(React, css, require_) {
     'kind.cycle': 'verbatim',
     'kind.density': 'near-duplicate',
     'kind.struct': 'counting',
+    'kind.custom': 'your phrase',
     'status.unavailable': 'Guard service unavailable',
     'status.unavailableHint': 'The host half does not serve /dsh-loop-guard/api — dsh-loop-guard is not loaded in this profile.',
     'status.disabled': 'Watching is off',
@@ -317,6 +343,12 @@ function createLoopGuardClient(React, css, require_) {
     return value
   }
 
+  /** Parse the phrase box: one phrase per line, blanks and one-character lines dropped. */
+  function phraseListOf(raw) {
+    if (typeof raw !== 'string') return []
+    return phraseListOr(raw.split('\n'))
+  }
+
   /* -------------------------------------------------------------- wire decode */
 
   /**
@@ -353,6 +385,11 @@ function createLoopGuardClient(React, css, require_) {
       // that as 12 would put a threshold on screen that nothing is enforcing.
       structLines: countOr(rawConfig.structLines, 12),
       structShare: numberOr(rawConfig.structShare, 0.6),
+      // The user's own phrases, off by default and staying off unless the list has something
+      // usable in it. A host that sends a non-array, or an array of blanks, must decode to
+      // "off" rather than to a rule that watches for nothing.
+      customPhrases: phraseListOr(rawConfig.customPhrases),
+      customRepeat: positiveOr(rawConfig.customRepeat, 5),
       cancel: rawConfig.cancel !== false,
       alarm: rawConfig.alarm !== false,
       sound: rawConfig.sound !== false,
@@ -402,7 +439,7 @@ function createLoopGuardClient(React, css, require_) {
           stream: streamOr(hit.stream),
           // An unrecognised `kind` keeps its row: the tag may be wrong, but the
           // loop it reports really happened, and dropping it loses a hit.
-          kind: hit.kind === 'density' ? 'density' : 'cycle',
+          kind: kindOr(hit.kind),
           unit: oneLine(hit.unit, 160),
           repeats: countOr(hit.repeats, 0),
           at: countOr(hit.at, 0),
@@ -444,6 +481,27 @@ function createLoopGuardClient(React, css, require_) {
     return number > 0 ? number : fallback
   }
 
+  /**
+   * The user's phrase list, as the host sent it.
+   *
+   * Entries are kept verbatim (trimmed) rather than normalized: the user typed these,
+   * and the text they see in the box has to be the text being matched. Short entries
+   * are dropped here for the same reason the host drops them — a one-character phrase
+   * matches everything, so keeping it would draw a rule that is always on.
+   */
+  function phraseListOr(value) {
+    if (!Array.isArray(value)) return []
+    var out = []
+    for (var i = 0; i < value.length; i += 1) {
+      var item = value[i]
+      if (typeof item !== 'string') continue
+      var phrase = item.trim()
+      if (phrase.length < 2) continue
+      if (out.indexOf(phrase) === -1) out.push(phrase)
+    }
+    return out
+  }
+
   /** A non-empty string label, else the session's own id — never blank in the table. */
   function labelOr(value, fallback) {
     return typeof value === 'string' && value !== '' ? oneLine(value, 80) : fallback
@@ -452,6 +510,21 @@ function createLoopGuardClient(React, css, require_) {
   /** Only the two streams the host actually has; anything else is "we do not know". */
   function streamOr(value) {
     return value === 'thinking' || value === 'text' ? value : null
+  }
+
+  /**
+   * Which rule caught it.
+   *
+   * A closed list, because the tag is a claim about *why* the alarm fired: `verbatim`
+   * says the text really did repeat, and an unknown kind rendered as `verbatim` would
+   * tell the reader the one thing the wire did not say. Unrecognised values become
+   * `cycle` only because a hit with no tag at all has to render as something; the four
+   * names here are the four rules in `src/detect.js`, and a fifth rule must be added in
+   * both places or it will be mislabelled here rather than silently.
+   */
+  function kindOr(value) {
+    if (value === 'density' || value === 'struct' || value === 'custom') return value
+    return 'cycle'
   }
 
   /**
@@ -916,7 +989,7 @@ function createLoopGuardClient(React, css, require_) {
     )
   }
 
-  /** The master switch plus the two thresholds, i.e. everything that writes config. */
+  /** The master switch plus the thresholds, i.e. everything that writes config. */
   function ConfigPanel(props) {
     var config = props.config
     var busy = props.busy
@@ -989,6 +1062,106 @@ function createLoopGuardClient(React, css, require_) {
           },
         }),
       ),
+    )
+  }
+
+  /**
+   * The user's own phrases: a switch, and the list it turns on.
+   *
+   * Off by default and off until the list has something usable in it, because the
+   * default has to be the guard everyone already has. Someone whose model gets stuck on
+   * a phrase the shape rules cannot derive turns it on and types the phrase; everyone
+   * else never sees a difference.
+   *
+   * The textarea is uncontrolled while typing for the same reason the number fields are:
+   * a controlled box fed by a poll fights the keyboard. It commits on blur, so a phrase
+   * is saved when the user leaves the box rather than on every keystroke.
+   */
+  function PhrasePanel(props) {
+    var config = props.config
+    var phrases = config.customPhrases
+    var joined = phrases.join('\n')
+
+    // "Turned on" is local state rather than `phrases.length > 0`, because the first thing a
+    // user does with this rule is switch it on — and at that moment the list is still empty.
+    // Deriving the box's visibility from the list would make the switch appear broken: the
+    // click saves an empty list, the host echoes it back, and no box ever appears.
+    var wantState = React.useState(function () {
+      return phrases.length > 0
+    })
+    var wanted = wantState[0]
+    var setWanted = wantState[1]
+
+    var state = React.useState(function () {
+      return joined
+    })
+    var text = state[0]
+    var setText = state[1]
+
+    React.useEffect(
+      function () {
+        setText(joined)
+      },
+      [joined],
+    )
+
+    function commit() {
+      var next = phraseListOf(text)
+      if (next.join('\n') === joined) return
+      props.write({ patch: { customPhrases: next } })
+    }
+
+    return h(
+      'div',
+      { className: 'lg-panel' },
+      h(Switch, {
+        label: props.t('label.custom'),
+        hint: props.t('label.customHint'),
+        checked: wanted,
+        disabled: props.busy,
+        onChange: function (next) {
+          setWanted(next)
+          // Switching off clears the list rather than just hiding it: a rule that is off but
+          // still holds phrases would come back on the next save of an unrelated field, and
+          // "off" would then depend on the order of edits.
+          if (next) return
+          setText('')
+          props.write({ patch: { customPhrases: [] } })
+        },
+      }),
+      wanted
+        ? h(
+          'div',
+          { className: 'lg-phrases' },
+          h('textarea', {
+            className: 'lg-phrases-input',
+            rows: 4,
+            value: text,
+            disabled: props.busy,
+            placeholder: props.t('label.customPlaceholder'),
+            'aria-label': props.t('label.custom'),
+            onChange: function (event) {
+              setText(event.target.value)
+            },
+            onBlur: commit,
+          }),
+          h(
+            'div',
+            { className: 'lg-phrases-foot' },
+            h('span', { className: 'lg-hint' }, props.t('label.customNote')),
+            h(Threshold, {
+              label: props.t('label.customRepeat'),
+              hint: props.t('label.customRepeatHint'),
+              value: config.customRepeat,
+              range: CUSTOM_REPEAT,
+              disabled: props.busy,
+              onCommit: function (value) {
+                props.write({ patch: { customRepeat: value } })
+              },
+            }),
+          ),
+        )
+        : h('p', { className: 'lg-hint lg-phrases-off' }, props.t('label.customOff')),
     )
   }
 
@@ -1208,6 +1381,14 @@ function createLoopGuardClient(React, css, require_) {
         ? null
         : h('div', { className: 'lg-banner lg-banner--error' }, t('status.error', { message: error })),
       h(ConfigPanel, {
+        config: snapshot.config,
+        busy: busy,
+        t: t,
+        write: function (payload) {
+          run('config', payload)
+        },
+      }),
+      h(PhrasePanel, {
         config: snapshot.config,
         busy: busy,
         t: t,

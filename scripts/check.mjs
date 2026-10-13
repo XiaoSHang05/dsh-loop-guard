@@ -13,7 +13,7 @@
 
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
-import { dirname, join, resolve, sep } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
@@ -98,21 +98,11 @@ async function main() {
   }
 
   // ---------------------------------------------------------------- syntax
-  for (const relative of [
-    'lib/client.js',
-    'src/client.js',
-    'src/index.js',
-    'src/detect.js',
-    'scripts/build-client.mjs',
-    'scripts/check.mjs',
-    'scripts/test.mjs',
-    '_probe/detect.mjs',
-    '_probe/host/routes.mjs',
-    '_probe/host/stream.mjs',
-    '_probe/contract/wire.mjs',
-    '_probe/render/mount.mjs',
-  ]) {
-    await parses(relative)
+  // Discovered, not listed. A hand-maintained list is how a new script ends up never parsed:
+  // `_probe/host/repl.mjs` sat outside `scripts/test.mjs` for the same reason.
+  for (const absolute of await sourceFiles(root)) {
+    if (!/\.(?:m?js|cjs)$/u.test(absolute)) continue
+    await parses(relative(root, absolute))
   }
 
   // ---------------------------------------------------------------- declared capabilities

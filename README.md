@@ -101,12 +101,21 @@ agent.cancel(
 ```bash
 npm install          # 装 jsdom / react / react-dom / @deepseek-ai/schemastery
 npm run build        # 由 src/client.js + src/client.css 重建 lib/client.js
-npm test             # 静态校验 + 七组测试台
+npm test             # 静态校验 + 八组测试台
 node _probe/mutation.mjs
 ```
 
 `npm test` 会先跑 `scripts/check.mjs`（产物新鲜度、语法、越权能力、颜色、清单路径、机器相关路径），再跑八组测试台，共 232 个断言。变异台会临时改写八处源码并在 `finally` 中恢复，**不要与其他编辑或构建并行运行**；它专门证明台子能抓到 bug（把已知 bug 放回去必须变红），而不是只证明代码今天能跑。
 
 回放语料用的探针（`_probe/struct-real-fp.mjs`）读取本机 DSH 会话日志，把全部 assistant 消息重放给真实检测器。它需要本机的会话日志，**换一台机器会得到不同数字**——编号循环的阈值就是这么定的，方法与数字写在 `VALIDATION.md`。
+
+发布前还有一道**历史**检查，因为 `git grep` 只看当前工作区，看不见已经改掉的内容：
+
+```bash
+git log --all -p --no-color > history.txt
+node _probe/history-scan.mjs history.txt
+```
+
+它找的是家目录、`session-` 开头的会话 id、令牌与私钥。这个仓库在公开之前用同一份表达式跑过一次 `git filter-repo`，把作者机器的路径与会话 id 从全部 13 次提交里清掉了。**历史里的一个路径比当前目录里的一个路径更难撤回**——已经 push 过的仓库，清理历史等于强制所有人重新 clone。
 
 MIT，见 LICENSE。改动记录见 `CHANGELOG.md`。

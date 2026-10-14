@@ -1,5 +1,5 @@
 /**
- * dsh-loop-guard — build step.
+ * dsh-rice-guard — build step.
  *
  * There is no bundler in this repository's toolchain (no esbuild / rolldown /
  * tsdown), so this script does the one thing the web shell actually requires:
@@ -24,7 +24,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 
 /** Plugin id — must match `name` in package.json; it keys the ModuleLoader. */
-const PLUGIN_ID = 'dsh-loop-guard'
+const PLUGIN_ID = 'dsh-rice-guard'
 
 const SOURCE = join(root, 'src', 'client.js')
 const STYLE = join(root, 'src', 'client.css')
@@ -49,7 +49,7 @@ window.__ModuleLoader__.load({
 `
 
 /**
- * The artifact mirrors what `createLoopGuardClient` returns, rather than
+ * The artifact mirrors what `createRiceGuardClient` returns, rather than
  * narrowing it to the two symbols the shell calls.
  *
  * `apply` and `inject` are the shell's contract. The rest are here because this
@@ -62,13 +62,13 @@ window.__ModuleLoader__.load({
  *
  * Extra keys are inert to the module loader.
  */
-const FOOTER = `    var api = createLoopGuardClient(React, __css, require);
+const FOOTER = `    var api = createRiceGuardClient(React, __css, require);
     exports.apply = api.apply;
     exports.inject = api.inject;
     exports.project = api.project;
     exports.alarmOf = api.alarmOf;
     exports.createStore = api.createStore;
-    exports.LoopGuardView = api.LoopGuardView;
+    exports.RiceGuardView = api.RiceGuardView;
     exports.AlarmCard = api.AlarmCard;
     return module.exports;
   }

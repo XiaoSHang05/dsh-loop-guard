@@ -141,7 +141,7 @@ try {
 
   /* 报警要走到真实 DOM，并且真的响过一次 */
   await act(async () => { streams[0].listeners.alarm(); await wait(5) })
-  const card = document.querySelector('.lg-alarm')
+  const card = document.querySelector('.rg-alarm')
   check(card, '报警卡出现在真实 DOM')
   check(card.textContent.includes('Let me go.'), '卡片上写着循环内容')
   check(sounds === 1, '提示音响一次')
@@ -150,7 +150,7 @@ try {
   const dismissed = await host.request('POST', 'hits', { id: hit.id, dismissed: true })
   check(dismissed.res.status === 200, '关闭请求被宿主接受')
   await act(async () => { streams[0].listeners.state(); await wait(5) })
-  check(!document.querySelector('.lg-alarm'), '用户关掉之后才消失')
+  check(!document.querySelector('.rg-alarm'), '用户关掉之后才消失')
 
   check(store.laneOf ? store.laneOf() : true, 'store 仍在运行')
   console.log(`repl: ${n}/${n} checks passed; 第 ${hit.repeats} 遍掐断，喂出 ${outcome.copiesFed}/${outcome.copiesSent} 遍`)

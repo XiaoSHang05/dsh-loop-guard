@@ -4,7 +4,7 @@
  * WHY THIS PROBE EXISTS
  * The contract is unusually blunt about it: "Alarm card: never auto-dismisses. A card that
  * vanished on its own would be the one alarm the user was away for." That is the whole point
- * of the plugin. A loop guard that notices a runaway and then lets the notification slide off
+ * of the plugin. A rice guard that notices a runaway and then lets the notification slide off
  * the screen after a few seconds has not guarded anything — it has produced a log line the
  * user was not present to read.
  *
@@ -122,11 +122,11 @@ check('no timer was armed across the whole probe', timersArmed === 0, 'armed=' +
 
 /* --- 4. the dismiss button is the only exit ----------------------------- */
 
-const actions = card.props.children.find((c) => c && c.type === 'div' && c.props.className === 'lg-alarm-actions')
+const actions = card.props.children.find((c) => c && c.type === 'div' && c.props.className === 'rg-alarm-actions')
 check('the card offers an actions row', actions !== undefined)
 const button = actions === undefined ? undefined : actions.props.children[0]
 check('dismiss button exists', button !== undefined && button.type === 'button', button && button.props.className)
-check('dismiss button is the primary action', String(button && button.props.className).includes('lg-button--primary'), button && button.props.className)
+check('dismiss button is the primary action', String(button && button.props.className).includes('rg-button--primary'), button && button.props.className)
 check('dismiss is wired to a handler', typeof (button && button.props.onClick) === 'function')
 
 /* --- 5. the card follows the snapshot, not a local timer ---------------- */

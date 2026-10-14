@@ -1,5 +1,5 @@
 {
-  "name": "lg-render-probe",
+  "name": "rg-render-probe",
   "private": true,
   "type": "module",
   "description": "Dev-only anchor: `_probe/host/repl.mjs` calls createRequire on this file so both benches resolve jsdom, react and react-dom from the same place. The versions live in the root package.json devDependencies and nowhere else — a second manifest with its own versions is how two benches end up running on two different jsdoms.",

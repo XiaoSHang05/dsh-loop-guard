@@ -6,13 +6,13 @@
 
 **它在本地读。** 宿主半段订阅模型正在往你屏幕上写的字，在内存里过一遍四条检测规则。检测只需要「刚才这几行长得一样吗」，不需要知道内容是什么。
 
-**它往本地写。** 它只往 DSH 的配置仓储里写一样东西：**它自己的阈值设置**（第几遍算重复、多长的窗口这些，`settings` 服务的 `loop-guard` 命名空间）。
+**它往本地写。** 它只往 DSH 的配置仓储里写一样东西：**它自己的阈值设置**（第几遍算重复、多长的窗口这些，`settings` 服务的 `rice-guard` 命名空间）。
 
 **命中记录本身不落盘。** 命中历史是宿主进程内存里的一个数组（`src/index.js:371`），上限 `HITS_CAP` 条、新的在前，DSH 重启就没了。落盘的字段只有配置那 15 项。所以「它记下了我哪句话复读了」这件事，最多活到下次重启。
 
 **它在本地打断。** 命中时对当前会话调一次 `agent.cancel({ kind: 'hook' }, { keepInbox: true })`。`keepInbox` 是刻意的：打断的是这一轮，不是你排队的下一句话，收件箱里的东西不会被顺手清掉。
 
-**它开一个本地 HTTP 端点。** 监控页的数据走 `/dsh-loop-guard/api/*`，和 DSH 其他界面一样只监听本机、走同一套浏览器会话认证。没有额外的鉴权层，也没有额外的对外监听。
+**它开一个本地 HTTP 端点。** 监控页的数据走 `/dsh-rice-guard/api/*`，和 DSH 其他界面一样只监听本机、走同一套浏览器会话认证。没有额外的鉴权层，也没有额外的对外监听。
 
 ## 它不碰什么
 
@@ -30,7 +30,7 @@
 
 **安全问题请不要开公开 issue。** 走 GitHub 的私密渠道：
 
-<https://github.com/XiaoSHang05/dsh-loop-guard/security/advisories/new>
+<https://github.com/XiaoSHang05/dsh-rice-guard/security/advisories/new>
 
 或者用仓库主页的 **Security → Report a vulnerability**。
 

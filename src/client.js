@@ -1,12 +1,12 @@
 /**
- * dsh-loop-guard — client half (source).
+ * dsh-rice-guard — client half (source).
  *
  * Two surfaces, one store:
  *
- *  - a `conversation.view` tab (id `loop-guard`, ordered last) — the 监控 page:
+ *  - a `conversation.view` tab (id `rice-guard`, ordered last) — the 监控 page:
  *    the master switch, the two thresholds that actually change behaviour, the
  *    live session table, and the hit history;
- *  - a `shell.overlay` entry (id `loop-guard-alarm`, ordered early) — the alarm
+ *  - a `shell.overlay` entry (id `rice-guard-alarm`, ordered early) — the alarm
  *    card, which never dismisses itself.
  *
  * WHY BOTH SURFACES SHARE ONE STORE
@@ -17,7 +17,7 @@
  * mounted surface draws from it.
  *
  * WHAT IS AUTHORITATIVE
- * `GET /dsh-loop-guard/api/state` is. The SSE stream and the fallback poll only
+ * `GET /dsh-rice-guard/api/state` is. The SSE stream and the fallback poll only
  * decide *when* to re-read it; neither carries data the client trusts. A dropped
  * frame therefore costs freshness, never correctness — and a client that never
  * receives a single frame still converges.
@@ -28,11 +28,11 @@
  * this file is individually guarded, and a failure is surfaced as inline text.
  *
  * The file is deliberately not an ES module: `React`, the stylesheet text and the
- * ModuleLoader `require` arrive as parameters of {@link createLoopGuardClient},
+ * ModuleLoader `require` arrive as parameters of {@link createRiceGuardClient},
  * so `scripts/build-client.mjs` is a pure concatenation and there is no JSX
  * anywhere (the view is built with `h = React.createElement`).
  *
- * @module dsh-loop-guard/client
+ * @module dsh-rice-guard/client
  */
 
 /**
@@ -43,17 +43,17 @@
  * @param require_ - the ModuleLoader resolver, kept for optional peers.
  * @returns the `apply` / `inject` pair the ModuleLoader exports.
  */
-function createLoopGuardClient(React, css, require_) {
+function createRiceGuardClient(React, css, require_) {
   'use strict'
 
   var h = React.createElement
-  var NS = 'loop-guard'
-  var CSS_TAG_ID = 'dsh-loop-guard/client.css'
+  var NS = 'rice-guard'
+  var CSS_TAG_ID = 'dsh-rice-guard/client.css'
 
   /* ------------------------------------------------------------------ wire */
 
   /** This package's own host API, mounted same-origin by `src/index.js`. */
-  var API_BASE = '/dsh-loop-guard/api/'
+  var API_BASE = '/dsh-rice-guard/api/'
   var API_STATE = API_BASE + 'state'
   var API_EVENTS = API_BASE + 'events'
 
@@ -173,7 +173,7 @@ function createLoopGuardClient(React, css, require_) {
     'kind.struct': '编号循环',
     'kind.custom': '自定义短语',
     'status.unavailable': '监控服务不可用',
-    'status.unavailableHint': '宿主半没有挂载 /dsh-loop-guard/api，这个 profile 里没有加载 dsh-loop-guard。',
+    'status.unavailableHint': '宿主半没有挂载 /dsh-rice-guard/api，这个 profile 里没有加载 dsh-rice-guard。',
     'status.disabled': '监控已关闭',
     'status.disabledHint': '下面的开关打开后才会开始观察模型输出。',
     'status.error': '操作失败：{message}',
@@ -241,7 +241,7 @@ function createLoopGuardClient(React, css, require_) {
     'kind.struct': 'counting',
     'kind.custom': 'your phrase',
     'status.unavailable': 'Guard service unavailable',
-    'status.unavailableHint': 'The host half does not serve /dsh-loop-guard/api — dsh-loop-guard is not loaded in this profile.',
+    'status.unavailableHint': 'The host half does not serve /dsh-rice-guard/api — dsh-rice-guard is not loaded in this profile.',
     'status.disabled': 'Watching is off',
     'status.disabledHint': 'Flip the switch below to start observing model output.',
     'status.error': 'That did not work: {message}',
@@ -880,12 +880,12 @@ function createLoopGuardClient(React, css, require_) {
     var score = clamp01(props.score === undefined ? 0 : props.score)
     return h(
       'div',
-      { className: 'lg-bar' },
+      { className: 'rg-bar' },
       h('div', {
-        className: cx('lg-bar-fill', score >= 1 ? 'lg-bar-fill--hot' : null),
+        className: cx('rg-bar-fill', score >= 1 ? 'rg-bar-fill--hot' : null),
         style: { width: percentOf(score) },
       }),
-      h('span', { className: 'lg-bar-label' }, percentOf(score)),
+      h('span', { className: 'rg-bar-label' }, percentOf(score)),
     )
   }
 
@@ -893,9 +893,9 @@ function createLoopGuardClient(React, css, require_) {
   function Field(props) {
     return h(
       'div',
-      { className: 'lg-field' },
-      h('div', { className: 'lg-field-label' }, props.label),
-      h('div', { className: cx('lg-field-value', props.className) }, props.children),
+      { className: 'rg-field' },
+      h('div', { className: 'rg-field-label' }, props.label),
+      h('div', { className: cx('rg-field-value', props.className) }, props.children),
     )
   }
 
@@ -934,15 +934,15 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'label',
-      { className: 'lg-threshold' },
+      { className: 'rg-threshold' },
       h(
         'span',
-        { className: 'lg-threshold-head' },
-        h('span', { className: 'lg-threshold-name' }, props.label),
-        h('span', { className: 'lg-threshold-hint' }, props.hint),
+        { className: 'rg-threshold-head' },
+        h('span', { className: 'rg-threshold-name' }, props.label),
+        h('span', { className: 'rg-threshold-hint' }, props.hint),
       ),
       h('input', {
-        className: 'lg-number',
+        className: 'rg-number',
         type: 'number',
         value: text,
         min: range.min,
@@ -973,10 +973,10 @@ function createLoopGuardClient(React, css, require_) {
   function Switch(props) {
     return h(
       'div',
-      { className: 'lg-row' },
+      { className: 'rg-row' },
       h(
         'label',
-        { className: 'lg-switch' },
+        { className: 'rg-switch' },
         h('input', {
           type: 'checkbox',
           checked: props.checked,
@@ -985,9 +985,9 @@ function createLoopGuardClient(React, css, require_) {
             props.onChange(event.target.checked)
           },
         }),
-        h('span', { className: 'lg-switch-text' }, props.label),
+        h('span', { className: 'rg-switch-text' }, props.label),
       ),
-      h('span', { className: 'lg-hint' }, props.hint),
+      h('span', { className: 'rg-hint' }, props.hint),
     )
   }
 
@@ -1002,7 +1002,7 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'div',
-      { className: 'lg-panel' },
+      { className: 'rg-panel' },
       h(Switch, {
         label: props.t('label.master'),
         hint: props.t('label.masterHint'),
@@ -1032,7 +1032,7 @@ function createLoopGuardClient(React, css, require_) {
       }),
       h(
         'div',
-        { className: 'lg-thresholds' },
+        { className: 'rg-thresholds' },
         h(Threshold, {
           label: props.t('label.minRepeat'),
           hint: props.t('label.minRepeatHint'),
@@ -1115,7 +1115,7 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'div',
-      { className: 'lg-panel' },
+      { className: 'rg-panel' },
       h(Switch, {
         label: props.t('label.custom'),
         hint: props.t('label.customHint'),
@@ -1134,9 +1134,9 @@ function createLoopGuardClient(React, css, require_) {
       wanted
         ? h(
           'div',
-          { className: 'lg-phrases' },
+          { className: 'rg-phrases' },
           h('textarea', {
-            className: 'lg-phrases-input',
+            className: 'rg-phrases-input',
             rows: 4,
             value: text,
             disabled: props.busy,
@@ -1149,8 +1149,8 @@ function createLoopGuardClient(React, css, require_) {
           }),
           h(
             'div',
-            { className: 'lg-phrases-foot' },
-            h('span', { className: 'lg-hint' }, props.t('label.customNote')),
+            { className: 'rg-phrases-foot' },
+            h('span', { className: 'rg-hint' }, props.t('label.customNote')),
             h(Threshold, {
               label: props.t('label.customRepeat'),
               hint: props.t('label.customRepeatHint'),
@@ -1163,7 +1163,7 @@ function createLoopGuardClient(React, css, require_) {
             }),
           ),
         )
-        : h('p', { className: 'lg-hint lg-phrases-off' }, props.t('label.customOff')),
+        : h('p', { className: 'rg-hint rg-phrases-off' }, props.t('label.customOff')),
     )
   }
 
@@ -1173,7 +1173,7 @@ function createLoopGuardClient(React, css, require_) {
     var t = props.t
 
     if (sessions.length === 0) {
-      return h('div', { className: 'lg-empty' }, t('label.empty.sessions'))
+      return h('div', { className: 'rg-empty' }, t('label.empty.sessions'))
     }
 
     var rows = []
@@ -1181,36 +1181,36 @@ function createLoopGuardClient(React, css, require_) {
       rows.push(
         h(
           'tr',
-          { key: sessions[i].sessionId, className: sessions[i].monitored ? null : 'lg-row-muted' },
+          { key: sessions[i].sessionId, className: sessions[i].monitored ? null : 'rg-row-muted' },
           h(
             'td',
-            { className: 'lg-cell-label' },
-            h('span', { className: 'lg-session-name', title: sessions[i].label }, sessions[i].label),
+            { className: 'rg-cell-label' },
+            h('span', { className: 'rg-session-name', title: sessions[i].label }, sessions[i].label),
             h(
               'span',
-              { className: 'lg-badges' },
+              { className: 'rg-badges' },
               sessions[i].monitored
-                ? h('span', { className: 'lg-badge' }, t('label.monitored'))
-                : h('span', { className: 'lg-badge lg-badge--off' }, t('label.muted')),
+                ? h('span', { className: 'rg-badge' }, t('label.monitored'))
+                : h('span', { className: 'rg-badge rg-badge--off' }, t('label.muted')),
               sessions[i].stream === null
                 ? null
-                : h('span', { className: 'lg-badge' }, t('stream.' + sessions[i].stream)),
+                : h('span', { className: 'rg-badge' }, t('stream.' + sessions[i].stream)),
             ),
           ),
-          h('td', { className: 'lg-cell-bar' }, h(ScoreBar, { score: sessions[i].score })),
+          h('td', { className: 'rg-cell-bar' }, h(ScoreBar, { score: sessions[i].score })),
           h(
             'td',
-            { className: 'lg-cell-unit' },
-            sessions[i].unit === '' ? h('span', { className: 'lg-dim' }, '—') : h('code', { className: 'lg-unit' }, sessions[i].unit),
+            { className: 'rg-cell-unit' },
+            sessions[i].unit === '' ? h('span', { className: 'rg-dim' }, '—') : h('code', { className: 'rg-unit' }, sessions[i].unit),
           ),
           h(
             'td',
-            { className: 'lg-cell-actions' },
+            { className: 'rg-cell-actions' },
             h(
               'button',
               {
                 type: 'button',
-                className: 'lg-button lg-button--ghost',
+                className: 'rg-button rg-button--ghost',
                 onClick: function () {
                   props.onToggle(sessions[i].sessionId, !sessions[i].monitored)
                 },
@@ -1224,7 +1224,7 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'table',
-      { className: 'lg-table' },
+      { className: 'rg-table' },
       h(
         'thead',
         null,
@@ -1232,9 +1232,9 @@ function createLoopGuardClient(React, css, require_) {
           'tr',
           null,
           h('th', null, t('label.sessions')),
-          h('th', { className: 'lg-cell-bar' }, '—'),
-          h('th', { className: 'lg-cell-unit' }, t('label.unit')),
-          h('th', { className: 'lg-cell-actions' }, ''),
+          h('th', { className: 'rg-cell-bar' }, '—'),
+          h('th', { className: 'rg-cell-unit' }, t('label.unit')),
+          h('th', { className: 'rg-cell-actions' }, ''),
         ),
       ),
       h('tbody', null, rows),
@@ -1247,7 +1247,7 @@ function createLoopGuardClient(React, css, require_) {
     var t = props.t
 
     if (hits.length === 0) {
-      return h('div', { className: 'lg-empty' }, t('label.empty.hits'))
+      return h('div', { className: 'rg-empty' }, t('label.empty.hits'))
     }
 
     var shown = hits.slice(0, HISTORY_LIMIT)
@@ -1257,29 +1257,29 @@ function createLoopGuardClient(React, css, require_) {
       items.push(
         h(
           'li',
-          { key: hit.id, className: cx('lg-hit', hit.dismissed ? 'lg-hit--dismissed' : null) },
+          { key: hit.id, className: cx('rg-hit', hit.dismissed ? 'rg-hit--dismissed' : null) },
           h(
             'div',
-            { className: 'lg-hit-head' },
-            h('span', { className: 'lg-hit-time' }, clockOf(hit.at)),
-            h('span', { className: 'lg-hit-session', title: hit.label }, hit.label),
-            h('span', { className: 'lg-badge' }, t('kind.' + hit.kind)),
-            h('span', { className: 'lg-badge' }, t('stream.' + hit.stream)),
+            { className: 'rg-hit-head' },
+            h('span', { className: 'rg-hit-time' }, clockOf(hit.at)),
+            h('span', { className: 'rg-hit-session', title: hit.label }, hit.label),
+            h('span', { className: 'rg-badge' }, t('kind.' + hit.kind)),
+            h('span', { className: 'rg-badge' }, t('stream.' + hit.stream)),
             hit.cancelled
-              ? h('span', { className: 'lg-badge lg-badge--good' }, t('label.cancelled'))
-              : h('span', { className: 'lg-badge lg-badge--off' }, t('label.alarmOnly')),
+              ? h('span', { className: 'rg-badge rg-badge--good' }, t('label.cancelled'))
+              : h('span', { className: 'rg-badge rg-badge--off' }, t('label.alarmOnly')),
           ),
-          h('code', { className: 'lg-unit' }, hit.unit),
-          h('div', { className: 'lg-hit-foot' }, t('label.repeats') + ' ' + hit.repeats),
+          h('code', { className: 'rg-unit' }, hit.unit),
+          h('div', { className: 'rg-hit-foot' }, t('label.repeats') + ' ' + hit.repeats),
         ),
       )
     }
 
     return h(
       'div',
-      { className: 'lg-history' },
-      h('ul', { className: 'lg-hit-list' }, items),
-      hits.length > shown.length ? h('div', { className: 'lg-hint' }, t('label.more', { count: shown.length })) : null,
+      { className: 'rg-history' },
+      h('ul', { className: 'rg-hit-list' }, items),
+      hits.length > shown.length ? h('div', { className: 'rg-hint' }, t('label.more', { count: shown.length })) : null,
     )
   }
 
@@ -1289,23 +1289,23 @@ function createLoopGuardClient(React, css, require_) {
     var t = props.t
 
     if (snapshot.status === 'loading') {
-      return h('div', { className: 'lg-banner' }, t('label.loading'))
+      return h('div', { className: 'rg-banner' }, t('label.loading'))
     }
     if (snapshot.status === 'unavailable') {
       return h(
         'div',
-        { className: 'lg-banner lg-banner--error' },
-        h('div', { className: 'lg-banner-title' }, t('status.unavailable')),
-        h('div', { className: 'lg-banner-hint' }, t('status.unavailableHint')),
-        snapshot.error === null ? null : h('div', { className: 'lg-banner-hint' }, snapshot.error),
+        { className: 'rg-banner rg-banner--error' },
+        h('div', { className: 'rg-banner-title' }, t('status.unavailable')),
+        h('div', { className: 'rg-banner-hint' }, t('status.unavailableHint')),
+        snapshot.error === null ? null : h('div', { className: 'rg-banner-hint' }, snapshot.error),
       )
     }
     if (snapshot.config.enabled === false) {
       return h(
         'div',
-        { className: 'lg-banner' },
-        h('div', { className: 'lg-banner-title' }, t('status.disabled')),
-        h('div', { className: 'lg-banner-hint' }, t('status.disabledHint')),
+        { className: 'rg-banner' },
+        h('div', { className: 'rg-banner-title' }, t('status.disabled')),
+        h('div', { className: 'rg-banner-hint' }, t('status.disabledHint')),
       )
     }
     return null
@@ -1320,7 +1320,7 @@ function createLoopGuardClient(React, css, require_) {
    * required here — the guard watches every session, so the tab is a global
    * dashboard that happens to be mounted inside one session's view area.
    */
-  function LoopGuardView(props) {
+  function RiceGuardView(props) {
     var store = props.store
     var t = props.t || function (key, params) {
       return translate(ZH, key, params)
@@ -1362,26 +1362,26 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'div',
-      { className: 'lg-root' },
+      { className: 'rg-root' },
       h(
         'header',
-        { className: 'lg-header' },
+        { className: 'rg-header' },
         // Title and state share one row: the state is a status word, not a
         // column heading, and stacking it under the title pushed the subtitle
         // down for nothing.
         h(
           'div',
-          { className: 'lg-header-row' },
-          h('h2', { className: 'lg-title' }, t('title.monitor')),
+          { className: 'rg-header-row' },
+          h('h2', { className: 'rg-title' }, t('title.monitor')),
           h(
             'span',
-            { className: 'lg-state' },
+            { className: 'rg-state' },
             snapshot.status === 'ready'
               ? [
                   // The dot is decoration and the word is the label. They used to be
                   // one element — the word rendered *inside* a 6px circle, so the two
                   // overlapped on top of each other. A dot has no text.
-                  h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }),
+                  h('span', { key: 'dot', className: 'rg-dot rg-dot--live', 'aria-hidden': 'true' }),
                   t('label.live'),
                 ]
               : snapshot.status === 'loading'
@@ -1389,12 +1389,12 @@ function createLoopGuardClient(React, css, require_) {
                 : t('label.reconnecting'),
           ),
         ),
-        h('p', { className: 'lg-subtitle' }, t('subtitle')),
+        h('p', { className: 'rg-subtitle' }, t('subtitle')),
       ),
       h(StatusBanner, { snapshot: snapshot, t: t }),
       error === null
         ? null
-        : h('div', { className: 'lg-banner lg-banner--error' }, t('status.error', { message: error })),
+        : h('div', { className: 'rg-banner rg-banner--error' }, t('status.error', { message: error })),
       h(ConfigPanel, {
         config: snapshot.config,
         busy: busy,
@@ -1413,8 +1413,8 @@ function createLoopGuardClient(React, css, require_) {
       }),
       h(
         'section',
-        { className: 'lg-section' },
-        h('h3', { className: 'lg-section-title' }, t('label.sessions')),
+        { className: 'rg-section' },
+        h('h3', { className: 'rg-section-title' }, t('label.sessions')),
         h(SessionTable, {
           sessions: snapshot.sessions,
           t: t,
@@ -1425,18 +1425,18 @@ function createLoopGuardClient(React, css, require_) {
       ),
       h(
         'section',
-        { className: 'lg-section' },
+        { className: 'rg-section' },
         h(
           'div',
-          { className: 'lg-section-head' },
-          h('h3', { className: 'lg-section-title' }, t('label.hits')),
+          { className: 'rg-section-head' },
+          h('h3', { className: 'rg-section-title' }, t('label.hits')),
           snapshot.hits.length === 0
             ? null
             : h(
                 'button',
                 {
                   type: 'button',
-                  className: 'lg-button lg-button--ghost lg-button--small',
+                  className: 'rg-button rg-button--ghost rg-button--small',
                   disabled: busy,
                   onClick: function () {
                     run('hits', { clearAll: true })
@@ -1514,18 +1514,18 @@ function createLoopGuardClient(React, css, require_) {
 
     return h(
       'div',
-      { className: 'lg-alarm', role: 'alertdialog', 'aria-live': 'assertive', 'aria-label': t('alarm.title') },
+      { className: 'rg-alarm', role: 'alertdialog', 'aria-live': 'assertive', 'aria-label': t('alarm.title') },
       h(
         'div',
-        { className: 'lg-alarm-head' },
-        h('span', { className: 'lg-alarm-mark', 'aria-hidden': 'true' }, '!'),
+        { className: 'rg-alarm-head' },
+        h('span', { className: 'rg-alarm-mark', 'aria-hidden': 'true' }, '!'),
         h(
           'div',
-          { className: 'lg-alarm-heading' },
-          h('div', { className: 'lg-alarm-title' }, t('alarm.title')),
+          { className: 'rg-alarm-heading' },
+          h('div', { className: 'rg-alarm-title' }, t('alarm.title')),
           h(
             'div',
-            { className: 'lg-alarm-meta' },
+            { className: 'rg-alarm-meta' },
             // `stream` is nullable once the wire is decoded, and "in undefined" is
             // worse than saying nothing: the session label is the load-bearing part.
             hit.stream === null
@@ -1533,34 +1533,34 @@ function createLoopGuardClient(React, css, require_) {
               : hit.label + ' · ' + t('alarm.stream', { stream: t('stream.' + hit.stream) }),
           ),
         ),
-        h('span', { className: 'lg-badge' }, t('kind.' + hit.kind)),
+        h('span', { className: 'rg-badge' }, t('kind.' + hit.kind)),
       ),
-      h(Field, { label: t('alarm.unit'), className: 'lg-alarm-unit' }, h('code', { className: 'lg-unit' }, hit.unit)),
+      h(Field, { label: t('alarm.unit'), className: 'rg-alarm-unit' }, h('code', { className: 'rg-unit' }, hit.unit)),
       h(
         'div',
-        { className: 'lg-alarm-stats' },
-        h('span', { className: 'lg-alarm-repeats' }, t('alarm.repeats', { count: hit.repeats })),
-        h('span', { className: 'lg-alarm-time' }, clockOf(hit.at)),
+        { className: 'rg-alarm-stats' },
+        h('span', { className: 'rg-alarm-repeats' }, t('alarm.repeats', { count: hit.repeats })),
+        h('span', { className: 'rg-alarm-time' }, clockOf(hit.at)),
       ),
       h(
         'div',
-        { className: cx('lg-alarm-note', hit.cancelled ? 'lg-alarm-note--done' : 'lg-alarm-note--live') },
+        { className: cx('rg-alarm-note', hit.cancelled ? 'rg-alarm-note--done' : 'rg-alarm-note--live') },
         hit.cancelled ? t('alarm.cancelled') : t('alarm.notCancelled'),
       ),
-      failure === null ? null : h('div', { className: 'lg-banner lg-banner--error' }, t('alarm.dismissFailed', { message: failure })),
+      failure === null ? null : h('div', { className: 'rg-banner rg-banner--error' }, t('alarm.dismissFailed', { message: failure })),
       h(
         'div',
-        { className: 'lg-alarm-actions' },
+        { className: 'rg-alarm-actions' },
         h(
           'button',
-          { type: 'button', className: 'lg-button lg-button--primary', disabled: busy, onClick: dismiss },
+          { type: 'button', className: 'rg-button rg-button--primary', disabled: busy, onClick: dismiss },
           busy ? t('alarm.dismissing') : t('alarm.dismiss'),
         ),
         h(
           'button',
           {
             type: 'button',
-            className: 'lg-button lg-button--ghost',
+            className: 'rg-button rg-button--ghost',
             onClick: function () {
               openMonitorTab()
             },
@@ -1587,7 +1587,7 @@ function createLoopGuardClient(React, css, require_) {
         var node = buttons[i]
         var id = node.getAttribute('data-view-id') || node.getAttribute('data-tab-id') || ''
         var text = node.textContent || ''
-        if (id === 'loop-guard' || text.trim() === translate(ZH, 'view.monitor')) {
+        if (id === 'rice-guard' || text.trim() === translate(ZH, 'view.monitor')) {
           node.click()
           return
         }
@@ -1606,7 +1606,7 @@ function createLoopGuardClient(React, css, require_) {
     if (typeof document === 'undefined') return
     if (document.querySelector('style[data-plugin-css=' + JSON.stringify(CSS_TAG_ID) + ']') !== null) return
     var tag = document.createElement('style')
-    tag.dataset.plugin = 'dsh-loop-guard'
+    tag.dataset.plugin = 'dsh-rice-guard'
     tag.dataset.pluginCss = CSS_TAG_ID
     tag.textContent = css
     document.head.appendChild(tag)
@@ -1620,7 +1620,7 @@ function createLoopGuardClient(React, css, require_) {
     }
     ctx.effect(function () {
       return ctx.locale.register(NS, { zh: ZH, en: EN })
-    }, 'dsh-loop-guard: dictionaries')
+    }, 'dsh-rice-guard: dictionaries')
     if (ctx.locale !== undefined && typeof ctx.locale.bind === 'function') {
       var bound = ctx.locale.bind(NS)
       translateFn = function (key, params) {
@@ -1640,7 +1640,7 @@ function createLoopGuardClient(React, css, require_) {
     ctx.effect(function () {
       store.start()
       return function () { store.dispose() }
-    }, 'dsh-loop-guard: shared store')
+    }, 'dsh-rice-guard: shared store')
     // Store lifetime belongs to the plugin, not the selected conversation tab.
 
     // Optional dock integration: no manifest dependency and no retry timer.
@@ -1649,12 +1649,12 @@ function createLoopGuardClient(React, css, require_) {
         var dock = require_('dsh-dock/client').dockBridge
         if (!dock || typeof dock.register !== 'function') return
         return dock.register({
-          id: 'loop-guard', name: '循环守卫', order: 120,
-          description: '监控思考与输出的重复内容', package: 'dsh-loop-guard',
-          View: function () { return h(LoopGuardView, { store: store, t: translateFn }) }
+          id: 'rice-guard', name: '米饭守卫', order: 120,
+          description: '监控思考与输出的重复内容', package: 'dsh-rice-guard',
+          View: function () { return h(RiceGuardView, { store: store, t: translateFn }) }
         })
       } catch (error) { /* Dock is optional; the tab and alarm remain independent. */ }
-    }, 'dsh-loop-guard: optional dock')
+    }, 'dsh-rice-guard: optional dock')
 
     /**
      * Reference-counted start/stop.
@@ -1673,7 +1673,7 @@ function createLoopGuardClient(React, css, require_) {
       return ctx.slots.register(
         {
           name: 'conversation.view',
-          id: 'loop-guard',
+          id: 'rice-guard',
           order: 120,
           locale: NS,
           label: function () {
@@ -1691,12 +1691,12 @@ function createLoopGuardClient(React, css, require_) {
              * empty" into a question with an answer.
              */
             if (typeof window === 'object' && window !== null) {
-              window.__loopGuard = { store: store, release: release }
+              window.__riceGuard = { store: store, release: release }
             }
             return { store: store, t: translateFn }
           },
         },
-        LoopGuardView,
+        RiceGuardView,
       )
     })
 
@@ -1706,7 +1706,7 @@ function createLoopGuardClient(React, css, require_) {
       return ctx.slots.register(
         {
           name: 'shell.overlay',
-          id: 'loop-guard-alarm',
+          id: 'rice-guard-alarm',
           order: 30,
           locale: NS,
           inject: function () {
@@ -1722,7 +1722,7 @@ function createLoopGuardClient(React, css, require_) {
   return {
     apply: apply,
     inject: inject,
-    LoopGuardView: LoopGuardView,
+    RiceGuardView: RiceGuardView,
     AlarmCard: AlarmCard,
     createStore: createStore,
     project: project,

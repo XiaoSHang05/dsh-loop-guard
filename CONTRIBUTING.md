@@ -35,6 +35,6 @@ node _probe/mutation.mjs
 
 ## 报告问题
 
-请附上：DSH 版本、Node 版本、`GET /dsh-loop-guard/api/state` 的返回（其中含版本、配置与最近命中）、以及你认为误报或漏报的那段原文。命中记录里的 `unit` 字段就是判定时用的那段文本。
+请附上：DSH 版本、Node 版本、`GET /dsh-rice-guard/api/state` 的返回（其中含版本、配置与最近命中）、以及你认为误报或漏报的那段原文。命中记录里的 `unit` 字段就是判定时用的那段文本。
 
 隐私提醒：`state` 返回里有会话 id 与标题。贴出来之前请自行截断。

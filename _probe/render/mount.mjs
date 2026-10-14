@@ -34,46 +34,46 @@ const store=api.createStore({}), cleanups=[]
 try {
   await act(async()=>{store.start();store.start();await wait(5)})
   check(streams.length===1,'store start idempotent')
-  await act(async()=>{root.render(React.createElement(React.Fragment,null,React.createElement(api.AlarmCard,{store}),React.createElement(api.LoopGuardView,{store})))})
-  check(document.querySelector('.lg-root'),'real monitor mounts')
-  check(!document.querySelector('.lg-alarm'),'no empty alarm')
+  await act(async()=>{root.render(React.createElement(React.Fragment,null,React.createElement(api.AlarmCard,{store}),React.createElement(api.RiceGuardView,{store})))})
+  check(document.querySelector('.rg-root'),'real monitor mounts')
+  check(!document.querySelector('.rg-alarm'),'no empty alarm')
   host.emit({session:{id:'dom-session'},cancel(){}},'reasoning-delta','Let me go. '.repeat(8))
   await act(async()=>{streams[0].listeners.alarm();await wait(5)})
-  check(document.querySelector('.lg-alarm'),'host hit travels through fetch/store to real DOM')
-  check(document.querySelector('.lg-alarm').textContent.includes('Let me go.'),'readable period')
+  check(document.querySelector('.rg-alarm'),'host hit travels through fetch/store to real DOM')
+  check(document.querySelector('.rg-alarm').textContent.includes('Let me go.'),'readable period')
   check(sounds===1,'audio requested once per hit')
   await act(async()=>{await store.sync()})
   check(sounds===1,'poll refresh never repeats sound')
   await act(async()=>{await wait(300)})
-  check(document.querySelector('.lg-alarm'),'alarm persists without user dismissal')
+  check(document.querySelector('.rg-alarm'),'alarm persists without user dismissal')
   rejectDismiss=true
-  await act(async()=>{document.querySelector('.lg-alarm-actions button').click();await wait(5)})
-  check(document.querySelector('.lg-alarm'),'failed POST preserves alarm')
-  check(document.querySelector('.lg-alarm').textContent.includes('test refusal'),'failure visible')
+  await act(async()=>{document.querySelector('.rg-alarm-actions button').click();await wait(5)})
+  check(document.querySelector('.rg-alarm'),'failed POST preserves alarm')
+  check(document.querySelector('.rg-alarm').textContent.includes('test refusal'),'failure visible')
   rejectDismiss=false
-  await act(async()=>{document.querySelector('.lg-alarm-actions button').click();await wait(5)})
-  check(!document.querySelector('.lg-alarm'),'successful real host dismiss removes alarm')
-  check(document.querySelector('.lg-history'),'history remains available')
+  await act(async()=>{document.querySelector('.rg-alarm-actions button').click();await wait(5)})
+  check(!document.querySelector('.rg-alarm'),'successful real host dismiss removes alarm')
+  check(document.querySelector('.rg-history'),'history remains available')
   // A dot is 6px wide. The state word used to be rendered inside it, so the two
   // drew on top of each other; the assertion is that no text lives in a dot.
-  const dot=document.querySelector('.lg-dot')
+  const dot=document.querySelector('.rg-dot')
   check(dot!==null,'the live dot is rendered')
   check(dot.textContent==='','the dot holds no text of its own')
-  check(document.querySelector('.lg-state').textContent.trim()==='实时','the state word is readable beside the dot')
+  check(document.querySelector('.rg-state').textContent.trim()==='实时','the state word is readable beside the dot')
   const clearButton=[...document.querySelectorAll('button')].find(b=>b.textContent==='清除历史')
   check(clearButton!==undefined,'history offers a clear control')
-  check(document.querySelectorAll('.lg-hit').length>0,'there is a hit to clear')
+  check(document.querySelectorAll('.rg-hit').length>0,'there is a hit to clear')
   await act(async()=>{clearButton.click();await wait(5)})
-  check(document.querySelectorAll('.lg-hit').length===0,'clear empties the recorded history')
-  check(document.querySelector('.lg-empty'),'the emptied list says so instead of rendering nothing')
+  check(document.querySelectorAll('.rg-hit').length===0,'clear empties the recorded history')
+  check(document.querySelector('.rg-empty'),'the emptied list says so instead of rendering nothing')
   check([...document.querySelectorAll('button')].find(b=>b.textContent==='清除历史')===undefined,
     'the clear control hides once there is nothing to clear')
-  const switches=[...document.querySelectorAll('.lg-switch input')]
+  const switches=[...document.querySelectorAll('.rg-switch input')]
   check(switches.length===4,'panel offers master, interrupt, tone and the user\'s own phrases')
   check(switches.every(input=>input.checked===true)===false,'the phrase switch is the one that defaults to off')
   check(switches.slice(0,3).every(input=>input.checked===true),'the three guard switches default to on')
   check(switches[3].checked===false,'the phrase rule is off until the user turns it on')
-  check(!document.querySelector('.lg-phrases-input'),'no phrase box while the rule is off')
+  check(!document.querySelector('.rg-phrases-input'),'no phrase box while the rule is off')
   await act(async()=>{switches[1].click();await wait(5)})
   check((await host.request('GET','state')).json.value.config.cancel===false,'interrupt switch reaches the host')
   await act(async()=>{switches[1].click();await wait(5)})
@@ -87,7 +87,7 @@ try {
   // The user's own phrases, driven through the real DOM: the switch reveals the box, the
   // box's contents reach the host, and the host's echo comes back into the field.
   await act(async()=>{switches[3].click();await wait(5)})
-  const box=document.querySelector('.lg-phrases-input')
+  const box=document.querySelector('.rg-phrases-input')
   check(box!==null,'turning the rule on reveals the phrase box')
   check((await host.request('GET','state')).json.value.config.customPhrases.length===0,
     'switching on with an empty box saves an empty list, not a placeholder')
@@ -100,7 +100,7 @@ try {
   // no listener at the root, so the commit never runs and the harness would report a UI bug
   // that exists only in the harness.
   const typeInto=async(value)=>{
-    const box=document.querySelector('.lg-phrases-input')
+    const box=document.querySelector('.rg-phrases-input')
     await act(async()=>{
       const setter=Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype,'value').set
       setter.call(box,value)
@@ -124,7 +124,7 @@ try {
   host.emit({session:{id:'dom-session'},cancel(){}},'text-delta',
     Array.from({length:8},(_,i)=>`Let me go. step ${i+1}`).join('\n')+'\n')
   await act(async()=>{streams[0].listeners.alarm();await wait(5)})
-  const card=document.querySelector('.lg-alarm')
+  const card=document.querySelector('.rg-alarm')
   check(card!==null,'a configured phrase raises the alarm card')
   check(card.textContent.includes('自定义短语'),'the card names the rule that fired, not a generic one')
 

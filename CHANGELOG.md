@@ -3,6 +3,12 @@
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。每条只写「用户能观察到什么变了」，不写内部重构。
 格式：`新增` / `改动` / `修复` / `已知边界`。
 
+## 0.3.0 — 2026-10-14
+
+### 改动
+
+- **改名：`dsh-loop-guard` → `dsh-rice-guard`（中文名「米饭守卫」）。** 功能一行没动，只换了身份。安装地址随之变为 `github:XiaoSHang05/dsh-rice-guard`，旧地址由 GitHub 重定向，但**已装过旧包的请先卸掉再装新的**：宿主按包名解析插件，两个名字会在 profile 里并存成两份。界面里的标签页 id、CSS 类名前缀（`lg-` → `rg-`）、跨半 HTTP 路径（`/dsh-loop-guard/api/` → `/dsh-rice-guard/api/`）一并换掉，所以**升级必须同时重启宿主并刷新网页**——只做一半会看到「监控服务不可用」。
+
 ## 0.2.0 — 2026-10-13
 
 ### 新增
@@ -39,5 +45,5 @@
 ### 新增
 
 - 检测核心与两半插件：监视思考流与输出流，抓连续周期复读与重复行密度，报警卡片需手动关闭，可自动取消失控回合。
-- 跨半 HTTP 读写接口与 SSE 推送（`/dsh-loop-guard/api/`：`health`、`state`、`config`、`monitor`、`hits`、`events`）。
+- 跨半 HTTP 读写接口与 SSE 推送（`/dsh-rice-guard/api/`：`health`、`state`、`config`、`monitor`、`hits`、`events`）。
 - 独立交付目录与离线测试台。

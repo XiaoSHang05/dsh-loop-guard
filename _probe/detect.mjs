@@ -11,7 +11,7 @@
  * A detector that fires on everything passes every positive case here. The cases that matter
  * are the ones that must stay quiet: an answer that restates its own headings, a code block,
  * a table, a list of similar-looking items, and prose that merely quotes a phrase twice. A
- * loop guard that cries wolf on ordinary work is worse than no loop guard, because it will be
+ * rice guard that cries wolf on ordinary work is worse than no rice guard, because it will be
  * switched off — and then the real runaway runs to the token ceiling unwatched.
  */
 import { createDetector, DEFAULTS } from '../src/detect.js'

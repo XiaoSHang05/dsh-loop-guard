@@ -1,5 +1,5 @@
 /**
- * dsh-loop-guard — 宿主半：订阅实时输出流、检测复读、打断回合，并把结果开成一个同源 HTTP/SSE 接口。
+ * dsh-rice-guard — 宿主半：订阅实时输出流、检测复读、打断回合，并把结果开成一个同源 HTTP/SSE 接口。
  *
  * ## 为什么需要这一半
  *
@@ -15,7 +15,7 @@
  *
  * ## 形状
  *
- * `/dsh-loop-guard/api/` 下的一组同源 JSON 路由，外加一个 SSE 通知流，注册在宿主的 webServer 上。
+ * `/dsh-rice-guard/api/` 下的一组同源 JSON 路由，外加一个 SSE 通知流，注册在宿主的 webServer 上。
  * 这是 `@xxxyz/dsh-mcp-manager` 给设置页用的同一套路子，也是姊妹插件 `dsh-wechat-rooms` 已经跑通的
  * 那一套：整个功能关在本包内，不需要改 DSH 一行，也不需要改别人。
  *
@@ -32,20 +32,20 @@
  * `remote.commands` 里客户端报「以哪个 agent 跑」是一回事。路由会校验每个入参的形状，
  * 但不会去重新推导调用者的身份。
  *
- * @module dsh-loop-guard
+ * @module dsh-rice-guard
  */
 
 import Schema from '@deepseek-ai/schemastery'
 import { createDetector, DEFAULTS } from './detect.js'
 
 // Settings is addressed by the patch entry id, never the package name.
-const SETTINGS_NS = 'loop-guard'
+const SETTINGS_NS = 'rice-guard'
 
 /** Cordis 插件名。 */
-export const name = 'dsh-loop-guard'
+export const name = 'dsh-rice-guard'
 
 /** 本包独占的路由前缀。 */
-const API_PREFIX = '/dsh-loop-guard/api/'
+const API_PREFIX = '/dsh-rice-guard/api/'
 
 /**
  * 路由的线上版本号，由 `GET health` 回显。
@@ -465,10 +465,10 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
       try {
         // keepInbox:true 是关键：只掐掉在飞的这一回合，排队和引导中的工作原样留着。
         // 不带它的话 cancel 会连队列一起清空——用户只是想让它别复读了，不是想丢掉自己的输入。
-        agent.cancel({ kind: 'hook', reason: 'loop-guard: repeated output' }, { keepInbox: true })
+        agent.cancel({ kind: 'hook', reason: 'rice-guard: repeated output' }, { keepInbox: true })
         entry.cancelled = true
       } catch (error) {
-        log('warn', 'dsh-loop-guard: cancel failed for %s (%s)', record.sessionId, String((error && error.message) || error))
+        log('warn', 'dsh-rice-guard: cancel failed for %s (%s)', record.sessionId, String((error && error.message) || error))
       }
     }
 
@@ -524,7 +524,7 @@ function createGuard(ctx, initialConfig, persist, broadcast) {
       scheduleState()
       if (hit != null) recordHit(record, hit, agent)
     } catch (error) {
-      log('warn', 'dsh-loop-guard: stream ingest failed (%s)', String((error && error.message) || error))
+      log('warn', 'dsh-rice-guard: stream ingest failed (%s)', String((error && error.message) || error))
     }
   }
 
@@ -811,7 +811,7 @@ function createConfigStore(ctx) {
     } catch (error) {
       if (!warned) {
         warned = true
-        ctx.logger?.info?.('dsh-loop-guard: settings service not usable, keeping config in memory (%s)', String((error && error.message) || error))
+        ctx.logger?.info?.('dsh-rice-guard: settings service not usable, keeping config in memory (%s)', String((error && error.message) || error))
       }
       return undefined
     }
@@ -829,13 +829,13 @@ function createConfigStore(ctx) {
         result.catch((error) => {
           if (warned) return
           warned = true
-          ctx.logger?.info?.('dsh-loop-guard: config not persisted (%s)', String((error && error.message) || error))
+          ctx.logger?.info?.('dsh-rice-guard: config not persisted (%s)', String((error && error.message) || error))
         })
       }
     } catch (error) {
       if (warned) return
       warned = true
-      ctx.logger?.info?.('dsh-loop-guard: config not persisted (%s)', String((error && error.message) || error))
+      ctx.logger?.info?.('dsh-rice-guard: config not persisted (%s)', String((error && error.message) || error))
     }
   }
 
@@ -913,7 +913,7 @@ export function apply(ctx, pluginConfig) {
     try {
       config = { ...config, ...cleanConfigPatch(plainConfig(pluginConfig)) }
     } catch (error) {
-      ctx.logger?.warn?.('dsh-loop-guard: plugin config ignored (%s)', String((error && error.message) || error))
+      ctx.logger?.warn?.('dsh-rice-guard: plugin config ignored (%s)', String((error && error.message) || error))
     }
   }
 
@@ -940,7 +940,7 @@ export function apply(ctx, pluginConfig) {
   const routes = routesOf(guard, backendPresent)
   const server = ctx.get('webServer')
   if (server === undefined || server === null) {
-    ctx.logger?.warn?.('dsh-loop-guard: no web server in this profile, the API is not mounted')
+    ctx.logger?.warn?.('dsh-rice-guard: no web server in this profile, the API is not mounted')
   } else {
     for (const key of Object.keys(routes)) {
       const [method, action] = key.split(' ')
@@ -978,7 +978,7 @@ export function apply(ctx, pluginConfig) {
         if (typeof dispose === 'function') disposers.push(dispose)
       } catch (error) {
         ctx.logger?.warn?.(
-          'dsh-loop-guard: route %s not mounted (%s)',
+          'dsh-rice-guard: route %s not mounted (%s)',
           path,
           String((error && error.message) || error),
         )
@@ -1003,7 +1003,7 @@ export function apply(ctx, pluginConfig) {
       })
       if (typeof dispose === 'function') disposers.push(dispose)
     } catch (error) {
-      ctx.logger?.warn?.('dsh-loop-guard: route %s not mounted (%s)', API_PREFIX, String((error && error.message) || error))
+      ctx.logger?.warn?.('dsh-rice-guard: route %s not mounted (%s)', API_PREFIX, String((error && error.message) || error))
     }
 
     // 事件流不在路由表里：它答 GET，但永远不返回一个 JSON 值，而且它拿着长连接订阅者，
@@ -1024,7 +1024,7 @@ export function apply(ctx, pluginConfig) {
       })
       if (typeof dispose === 'function') disposers.push(dispose)
     } catch (error) {
-      ctx.logger?.warn?.('dsh-loop-guard: route %sevents not mounted (%s)', API_PREFIX, String((error && error.message) || error))
+      ctx.logger?.warn?.('dsh-rice-guard: route %sevents not mounted (%s)', API_PREFIX, String((error && error.message) || error))
     }
   }
 
@@ -1040,10 +1040,10 @@ export function apply(ctx, pluginConfig) {
     }
     guard.stop()
     stream.stop()
-  }, 'dsh-loop-guard lifecycle')
+  }, 'dsh-rice-guard lifecycle')
 
   ctx.logger?.info?.(
-    'dsh-loop-guard: ready — %sAPI mounted (events on %sevents), watching %s, cancel %s',
+    'dsh-rice-guard: ready — %sAPI mounted (events on %sevents), watching %s, cancel %s',
     API_PREFIX,
     API_PREFIX,
     config.enabled ? `${config.scopeDefault} sessions` : 'nothing (disabled)',

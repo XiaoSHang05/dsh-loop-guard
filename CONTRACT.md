@@ -1,4 +1,4 @@
-# dsh-loop-guard — frozen interface contract
+# dsh-rice-guard — frozen interface contract
 
 Every half of this package is written against this file. If a change is needed here, it is
 needed in all three places (host half, client half, harnesses), and this file is edited first.
@@ -118,7 +118,7 @@ Rules the core guarantees (and the harness must prove):
 
 ## HTTP surface (host half)
 
-Prefix `/dsh-loop-guard/api/`. Every response is JSON `{ ok: true, value }` or
+Prefix `/dsh-rice-guard/api/`. Every response is JSON `{ ok: true, value }` or
 `{ ok: false, error: { code, message } }` with a matching status.
 
 | Route | Body | Value |
@@ -209,8 +209,8 @@ data: {"sessions":[...]}
 
 ## Client half
 
-- Tab: `conversation.view`, id `loop-guard`, order `120`, label from the dictionary.
-- Overlay: `shell.overlay`, id `loop-guard-alarm`, order `30`.
+- Tab: `conversation.view`, id `rice-guard`, order `120`, label from the dictionary.
+- Overlay: `shell.overlay`, id `rice-guard-alarm`, order `30`.
 - Alarm card: **never auto-dismisses**. It has a dismiss button and a sound. A card that
   vanished on its own would be the one alarm the user was away for.
 - The monitor tab draws: master switch, the thresholds that matter (`minRepeat`, `densityRatio`,

@@ -84,7 +84,7 @@ async function main() {
       if (!artifact.includes(needle)) fail(`lib/client.js does not contain ${needle}`)
     }
     // The boot block is what the client harnesses reach for by name.
-    for (const name of ['project', 'alarmOf', 'createStore', 'LoopGuardView', 'AlarmCard']) {
+    for (const name of ['project', 'alarmOf', 'createStore', 'RiceGuardView', 'AlarmCard']) {
       if (!artifact.includes(`exports.${name} = api.${name}`)) {
         fail(`lib/client.js does not re-export ${name}; _probe/contract/wire.mjs cannot reach it`)
       }
@@ -180,7 +180,7 @@ async function main() {
   for (const action of ['health', 'state', 'config', 'monitor', 'hits', 'events']) {
     if (!host.includes(`'${action}'`) && !host.includes(`'POST ${action}'`)) fail(`src/index.js never mentions the "${action}" action`)
   }
-  if (!host.includes("const API_PREFIX = '/dsh-loop-guard/api/'")) {
+  if (!host.includes("const API_PREFIX = '/dsh-rice-guard/api/'")) {
     fail('src/index.js does not define the frozen API prefix')
   }
 

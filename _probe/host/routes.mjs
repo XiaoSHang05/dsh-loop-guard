@@ -16,7 +16,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const ROOT = join(import.meta.dirname, '..', '..')
-const API = '/dsh-loop-guard/api/'
+const API = '/dsh-rice-guard/api/'
 
 const results = []
 function check(label, ok, detail) {
@@ -159,7 +159,7 @@ async function main() {
   {
     const { routes, mod } = await mount()
     const paths = routes.map((route) => `${route.kind} ${route.path}`).sort()
-    check('mounts name', mod.name === 'dsh-loop-guard', mod.name)
+    check('mounts name', mod.name === 'dsh-rice-guard', mod.name)
     check('injects webServer', JSON.stringify(mod.inject) === '["webServer"]', JSON.stringify(mod.inject))
     check(
       'registers the five actions, the prefix and events',
@@ -419,16 +419,16 @@ async function main() {
   {
     const updates = []
     const settings = {
-      describe: () => [{ ns: 'loop-guard', value: {}, revision: 3 }],
+      describe: () => [{ ns: 'rice-guard', value: {}, revision: 3 }],
       update: (ns, patch, revision) => updates.push({ ns, patch, revision }),
     }
     const host = await mount({ settings })
     await call(host.routes, 'POST', `${API}config`, { patch: { minRepeat: 8 } })
-    check('a config change is persisted under the loop-guard namespace',
-      updates.length === 1 && updates[0].ns === 'loop-guard' && updates[0].patch.minRepeat === 8, JSON.stringify(updates))
+    check('a config change is persisted under the rice-guard namespace',
+      updates.length === 1 && updates[0].ns === 'rice-guard' && updates[0].patch.minRepeat === 8, JSON.stringify(updates))
 
     const persisted = await mount({
-      settings: { describe: () => [{ ns: 'loop-guard', value: { minRepeat: 11, alarm: false }, revision: 1 }], update: () => {} },
+      settings: { describe: () => [{ ns: 'rice-guard', value: { minRepeat: 11, alarm: false }, revision: 1 }], update: () => {} },
     })
     const value = (await call(persisted.routes, 'GET', `${API}state`)).json.value
     check('a persisted config wins over the defaults',

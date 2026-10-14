@@ -20,8 +20,8 @@ const boot = JSON.parse(match[1])
 const baseTag = (html.match(/<base[^>]*>/u) ?? ['(none)'])[0]
 console.log('shell', shell.status, 'base tag', baseTag, 'rev', boot.rev, 'entries', boot.entries.length)
 
-const guard = boot.entries.find((entry) => entry.id === 'dsh-loop-guard')
-console.log('loop-guard entry:', guard ? JSON.stringify(guard) : 'ABSENT')
+const guard = boot.entries.find((entry) => entry.id === 'dsh-rice-guard')
+console.log('rice-guard entry:', guard ? JSON.stringify(guard) : 'ABSENT')
 
 // The boot entry url is relative and the shell declares `<base href="./">`, so
 // it resolves against the shell's own directory. Resolve it the same way the
@@ -51,7 +51,7 @@ if (guard !== undefined) {
 }
 
 // The host half, on the one prefix this plugin registers.
-for (const path of ['/dsh-loop-guard/api/health', '/dsh-loop-guard/api/state']) {
+for (const path of ['/dsh-rice-guard/api/health', '/dsh-rice-guard/api/state']) {
   const res = await fetch(at(path), { headers: { cookie: authCookie() } })
   const text = await res.text()
   console.log(path, '->', res.status, text.slice(0, 80))

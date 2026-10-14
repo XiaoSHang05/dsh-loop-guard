@@ -1,5 +1,5 @@
 /**
- * Detection core for dsh-loop-guard.
+ * Detection core for dsh-rice-guard.
  *
  * Pure: no I/O, no timers, no context, no dependencies. It is a function of the text it is
  * fed, which is what makes it testable without a harness and reusable by both the host half

@@ -32,7 +32,7 @@ const mutations=[
   ['src/detect.js','qualifies: found.lines >= config.structLines && found.share >= config.structShare,','qualifies: found.lines >= config.structLines,','_probe/detect.mjs'],
   ['src/detect.js','if ((phrase.length * need) / span < CUSTOM_DENSITY) continue','if (false) continue','_probe/detect.mjs'],
   ['src/client.js','      wanted\n        ? h(','      phrases.length > 0\n        ? h(','_probe/render/mount.mjs'],
-  ['src/client.js',"h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }),", "h('span', { key: 'dot', className: 'lg-dot lg-dot--live', 'aria-hidden': 'true' }, t('label.live')),",'_probe/render/mount.mjs'],
+  ['src/client.js',"h('span', { key: 'dot', className: 'rg-dot rg-dot--live', 'aria-hidden': 'true' }),", "h('span', { key: 'dot', className: 'rg-dot rg-dot--live', 'aria-hidden': 'true' }, t('label.live')),",'_probe/render/mount.mjs'],
   ['src/client.js',"run('hits', { clearAll: true })","run('hits', { dismissed: true })",'_probe/render/mount.mjs'],
 ]
 for(const [file,from,to,test] of mutations){

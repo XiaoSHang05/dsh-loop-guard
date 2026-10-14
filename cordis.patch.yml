@@ -1,4 +1,4 @@
-# dsh-loop-guard bundle patch.
+# dsh-rice-guard bundle patch.
 #
 # Inserts the plugin row into the profile roster. The row is a bare plugin by
 # package name:
@@ -21,8 +21,8 @@
 # read once at process start, and replacing an installed package version needs a
 # restart through Plugin Manager.
 - insert:
-    - id: loop-guard
-      name: dsh-loop-guard
+    - id: rice-guard
+      name: dsh-rice-guard
       config:
         # Master switch. Off means the subscription stays silent — nothing is
         # buffered and nothing is cancelled.

@@ -1,5 +1,5 @@
 /*
- * dsh-loop-guard — stylesheet for the 监控 tab and the alarm card.
+ * dsh-rice-guard — stylesheet for the 监控 tab and the alarm card.
  *
  * Every colour is a `--dsw-alias-*` token, so light/dark (and any future theme)
  * follow the shell automatically. Nothing here is a literal colour: a hard-coded
@@ -8,18 +8,18 @@
  * palette.
  *
  * Two roots, one file:
- *   `.lg-root`   the tab, which scrolls inside whatever the shell gives it;
- *   `.lg-alarm`  the card, which floats in the shell overlay layer.
+ *   `.rg-root`   the tab, which scrolls inside whatever the shell gives it;
+ *   `.rg-alarm`  the card, which floats in the shell overlay layer.
  * The pieces in between (bar, badge, table, banner, button) are shared.
  *
- * Class names are plain `lg-*`, not hashed: the stylesheet ships with the view
+ * Class names are plain `rg-*`, not hashed: the stylesheet ships with the view
  * that uses it, and a readable selector is worth more here than collision
  * proofing against a hash nobody reads.
  */
 
 /* ------------------------------------------------------------------- tab */
 
-.lg-root {
+.rg-root {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -34,23 +34,23 @@
   font-size: 14px;
   line-height: 1.5;
   container-type: inline-size;
-  container-name: lg;
+  container-name: rg;
 }
 
-.lg-root::-webkit-scrollbar {
+.rg-root::-webkit-scrollbar {
   width: 8px;
 }
 
-.lg-root::-webkit-scrollbar-thumb {
+.rg-root::-webkit-scrollbar-thumb {
   border-radius: 4px;
   background: var(--dsw-alias-scrollbar-bg-l2);
 }
 
-.lg-root::-webkit-scrollbar-thumb:hover {
+.rg-root::-webkit-scrollbar-thumb:hover {
   background: var(--dsw-alias-scrollbar-hover-l2);
 }
 
-.lg-header {
+.rg-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -58,27 +58,27 @@
 }
 
 /* The state word sits beside the title instead of above the subtitle. */
-.lg-header-row {
+.rg-header-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
-.lg-title {
+.rg-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
 }
 
-.lg-subtitle {
+.rg-subtitle {
   margin: 0;
   color: var(--dsw-alias-label-secondary);
   font-size: 13px;
 }
 
-.lg-state {
+.rg-state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -89,7 +89,7 @@
 
 /* A dot carries no text: it is a mark, sized in pixels, and any word put inside
    it would spill over the circle. */
-.lg-dot {
+.rg-dot {
   width: 6px;
   height: 6px;
   flex: 0 0 auto;
@@ -98,13 +98,13 @@
 }
 
 /* Only the live dot is coloured: an idle indicator should not compete with it. */
-.lg-dot--live {
+.rg-dot--live {
   background: var(--dsw-alias-state-success-primary);
 }
 
 /* ------------------------------------------------------------------ panels */
 
-.lg-panel {
+.rg-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -115,20 +115,20 @@
   background: var(--dsw-alias-bg-layer-1);
 }
 
-.lg-row {
+.rg-row {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.lg-hint {
+.rg-hint {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
 /* The master switch is a checkbox plus a label, styled to read as a switch. */
-.lg-switch {
+.rg-switch {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -137,7 +137,7 @@
   font-weight: 500;
 }
 
-.lg-switch input {
+.rg-switch input {
   width: 16px;
   height: 16px;
   margin: 0;
@@ -145,44 +145,44 @@
   cursor: pointer;
 }
 
-.lg-switch input:disabled {
+.rg-switch input:disabled {
   cursor: default;
 }
 
-.lg-switch-text {
+.rg-switch-text {
   color: var(--dsw-alias-label-primary);
 }
 
-.lg-thresholds {
+.rg-thresholds {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
-.lg-threshold {
+.rg-threshold {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.lg-threshold-head {
+.rg-threshold-head {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.lg-threshold-name {
+.rg-threshold-name {
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   font-weight: 500;
 }
 
-.lg-threshold-hint {
+.rg-threshold-hint {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
-.lg-number {
+.rg-number {
   width: 100%;
   box-sizing: border-box;
   padding: 6px 10px;
@@ -194,16 +194,16 @@
   font-size: 13px;
 }
 
-.lg-number:hover:not(:disabled) {
+.rg-number:hover:not(:disabled) {
   border-color: var(--dsw-alias-border-l3);
 }
 
-.lg-number:focus-visible {
+.rg-number:focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
   outline-offset: 1px;
 }
 
-.lg-number:disabled {
+.rg-number:disabled {
   color: var(--dsw-alias-label-dimmed);
   cursor: default;
 }
@@ -217,13 +217,13 @@
  * face: phrases are matched character for character, and a proportional face makes two
  * phrases that differ by a space look identical on screen.
  */
-.lg-phrases {
+.rg-phrases {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.lg-phrases-input {
+.rg-phrases-input {
   width: 100%;
   box-sizing: border-box;
   min-height: 72px;
@@ -238,41 +238,41 @@
   line-height: 1.5;
 }
 
-.lg-phrases-input:hover:not(:disabled) {
+.rg-phrases-input:hover:not(:disabled) {
   border-color: var(--dsw-alias-border-l3);
 }
 
-.lg-phrases-input:focus-visible {
+.rg-phrases-input:focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
   outline-offset: 1px;
 }
 
-.lg-phrases-input:disabled {
+.rg-phrases-input:disabled {
   color: var(--dsw-alias-label-dimmed);
   cursor: default;
 }
 
-.lg-phrases-foot {
+.rg-phrases-foot {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: start;
 }
 
-.lg-phrases-off {
+.rg-phrases-off {
   margin: 0;
 }
 
 /* ---------------------------------------------------------------- sections */
 
-.lg-section {
+.rg-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 0 0 auto;
 }
 
-.lg-section-title {
+.rg-section-title {
   margin: 0;
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
@@ -283,7 +283,7 @@
 
 /* A section head that carries a control keeps the title's baseline and pushes
    the control to the far edge, so the button lines up with the table below it. */
-.lg-section-head {
+.rg-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -291,7 +291,7 @@
   min-height: 22px;
 }
 
-.lg-empty {
+.rg-empty {
   padding: 20px 16px;
   border: 1px dashed var(--dsw-alias-border-l2);
   border-radius: var(--dsw-radius-lg);
@@ -302,14 +302,14 @@
 
 /* ------------------------------------------------------------------- table */
 
-.lg-table {
+.rg-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13px;
 }
 
-.lg-table th {
+.rg-table th {
   padding: 6px 10px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   color: var(--dsw-alias-label-tertiary);
@@ -318,46 +318,46 @@
   text-align: left;
 }
 
-.lg-table td {
+.rg-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   vertical-align: middle;
 }
 
-.lg-table tr:last-child td {
+.rg-table tr:last-child td {
   border-bottom: none;
 }
 
-.lg-table tbody tr:hover {
+.rg-table tbody tr:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
 /* A muted session stays legible — it is muted, not gone. */
-.lg-row-muted td {
+.rg-row-muted td {
   color: var(--dsw-alias-label-dimmed);
 }
 
-.lg-cell-label {
+.rg-cell-label {
   width: 34%;
   min-width: 0;
 }
 
-.lg-cell-bar {
+.rg-cell-bar {
   width: 22%;
 }
 
-.lg-cell-unit {
+.rg-cell-unit {
   width: 34%;
   min-width: 0;
 }
 
-.lg-cell-actions {
+.rg-cell-actions {
   width: 10%;
   text-align: right;
   white-space: nowrap;
 }
 
-.lg-session-name {
+.rg-session-name {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -366,18 +366,18 @@
   font-weight: 500;
 }
 
-.lg-row-muted .lg-session-name {
+.rg-row-muted .rg-session-name {
   color: var(--dsw-alias-label-dimmed);
 }
 
-.lg-badges {
+.rg-badges {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 4px;
 }
 
-.lg-badge {
+.rg-badge {
   display: inline-block;
   padding: 1px 6px;
   border-radius: var(--dsw-radius-sm);
@@ -388,19 +388,19 @@
   white-space: nowrap;
 }
 
-.lg-badge--off {
+.rg-badge--off {
   background: var(--dsw-alias-bg-layer-3);
   color: var(--dsw-alias-label-dimmed);
 }
 
-.lg-badge--good {
+.rg-badge--good {
   background: var(--dsw-alias-state-success-tertiary);
   color: var(--dsw-alias-state-success-primary);
 }
 
 /* --------------------------------------------------------------------- bar */
 
-.lg-bar {
+.rg-bar {
   position: relative;
   height: 6px;
   border-radius: 3px;
@@ -408,7 +408,7 @@
   overflow: hidden;
 }
 
-.lg-bar-fill {
+.rg-bar-fill {
   height: 100%;
   border-radius: 3px;
   background: var(--dsw-alias-state-warn-primary);
@@ -416,11 +416,11 @@
 }
 
 /* Past the threshold the bar turns into the "this is happening now" colour. */
-.lg-bar-fill--hot {
+.rg-bar-fill--hot {
   background: var(--dsw-alias-state-error-primary);
 }
 
-.lg-bar-label {
+.rg-bar-label {
   display: block;
   margin-top: 4px;
   color: var(--dsw-alias-label-tertiary);
@@ -429,20 +429,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lg-bar-fill {
+  .rg-bar-fill {
     transition: none;
   }
 }
 
 /* -------------------------------------------------------------- hit history */
 
-.lg-history {
+.rg-history {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.lg-hit-list {
+.rg-hit-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -451,7 +451,7 @@
   list-style: none;
 }
 
-.lg-hit {
+.rg-hit {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -463,25 +463,25 @@
 }
 
 /* Dismissed hits stay in the list as history, so they recede rather than vanish. */
-.lg-hit--dismissed {
+.rg-hit--dismissed {
   border-left-color: var(--dsw-alias-border-l3);
   opacity: 0.72;
 }
 
-.lg-hit-head {
+.rg-hit-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.lg-hit-time {
+.rg-hit-time {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.lg-hit-session {
+.rg-hit-session {
   max-width: 40%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -490,14 +490,14 @@
   font-weight: 500;
 }
 
-.lg-hit-foot {
+.rg-hit-foot {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
 /* The repeated text itself: monospace, because the loop is a *string* and its
    whitespace is often the thing that gives it away. */
-.lg-unit {
+.rg-unit {
   display: block;
   max-width: 100%;
   overflow: hidden;
@@ -511,13 +511,13 @@
   font-size: 12px;
 }
 
-.lg-dim {
+.rg-dim {
   color: var(--dsw-alias-label-dimmed);
 }
 
 /* ----------------------------------------------------------------- banners */
 
-.lg-banner {
+.rg-banner {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -530,28 +530,28 @@
   font-size: 13px;
 }
 
-.lg-banner--error {
+.rg-banner--error {
   border-color: var(--dsw-alias-state-error-primary);
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-error);
 }
 
-.lg-banner-title {
+.rg-banner-title {
   font-weight: 600;
 }
 
-.lg-banner-hint {
+.rg-banner-hint {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
-.lg-banner--error .lg-banner-hint {
+.rg-banner--error .rg-banner-hint {
   color: var(--dsw-alias-label-error);
 }
 
 /* ----------------------------------------------------------------- buttons */
 
-.lg-button {
+.rg-button {
   padding: 5px 12px;
   border: 1px solid transparent;
   border-radius: var(--dsw-radius-md);
@@ -561,39 +561,39 @@
   cursor: pointer;
 }
 
-.lg-button:focus-visible {
+.rg-button:focus-visible {
   outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color);
   outline-offset: 1px;
 }
 
-.lg-button:disabled {
+.rg-button:disabled {
   cursor: default;
   opacity: 0.6;
 }
 
-.lg-button--primary {
+.rg-button--primary {
   background: var(--dsw-alias-button-primary-fill);
   color: var(--dsw-alias-label-primary-foreground);
 }
 
-.lg-button--primary:hover:not(:disabled) {
+.rg-button--primary:hover:not(:disabled) {
   background: var(--dsw-alias-button-primary-hover);
 }
 
-.lg-button--ghost {
+.rg-button--ghost {
   border-color: var(--dsw-alias-border-l2);
   background: transparent;
   color: var(--dsw-alias-label-secondary);
 }
 
-.lg-button--ghost:hover:not(:disabled) {
+.rg-button--ghost:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
 
 /* A head-row control: smaller than a form button, because it sits next to a
    12px heading rather than among full-size fields. */
-.lg-button--small {
+.rg-button--small {
   padding: 2px 8px;
   font-size: 12px;
   line-height: 18px;
@@ -608,7 +608,7 @@
  * against that layer and must NOT assume it is the only child: it is anchored to
  * the top-right corner, clear of the conversation's own controls.
  */
-.lg-alarm {
+.rg-alarm {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -629,7 +629,7 @@
   box-shadow: var(--dsw-elevation-prominent);
 }
 
-.lg-alarm-head {
+.rg-alarm-head {
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -637,7 +637,7 @@
 
 /* The mark is a shape, not a colour: it survives every theme, including a
    high-contrast one where an all-red card would lose its own border. */
-.lg-alarm-mark {
+.rg-alarm-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -652,7 +652,7 @@
   line-height: 1;
 }
 
-.lg-alarm-heading {
+.rg-alarm-heading {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -660,13 +660,13 @@
   min-width: 0;
 }
 
-.lg-alarm-title {
+.rg-alarm-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--dsw-alias-label-primary);
 }
 
-.lg-alarm-meta {
+.rg-alarm-meta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -674,25 +674,25 @@
   font-size: 12px;
 }
 
-.lg-field {
+.rg-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
 }
 
-.lg-field-label {
+.rg-field-label {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
 }
 
-.lg-field-value {
+.rg-field-value {
   min-width: 0;
 }
 
 /* The unit is the alarm's headline fact: give it room for two lines here,
    unlike the one-line table cell. */
-.lg-alarm-unit .lg-unit {
+.rg-alarm-unit .rg-unit {
   white-space: normal;
   word-break: break-word;
   max-height: 3.6em;
@@ -700,26 +700,26 @@
   padding: 6px 8px;
 }
 
-.lg-alarm-stats {
+.rg-alarm-stats {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.lg-alarm-repeats {
+.rg-alarm-repeats {
   color: var(--dsw-alias-state-error-primary);
   font-size: 13px;
   font-weight: 600;
 }
 
-.lg-alarm-time {
+.rg-alarm-time {
   color: var(--dsw-alias-label-tertiary);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.lg-alarm-note {
+.rg-alarm-note {
   padding: 6px 8px;
   border-radius: var(--dsw-radius-sm);
   background: var(--dsw-alias-bg-layer-2);
@@ -727,15 +727,15 @@
   font-size: 12px;
 }
 
-.lg-alarm-note--done {
+.rg-alarm-note--done {
   color: var(--dsw-alias-state-success-primary);
 }
 
-.lg-alarm-note--live {
+.rg-alarm-note--live {
   color: var(--dsw-alias-state-warn-label);
 }
 
-.lg-alarm-actions {
+.rg-alarm-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -750,17 +750,17 @@
  * score bar is the first thing to go, because the unit text is what tells the
  * user *what* is looping.
  */
-@container lg (max-width: 520px) {
-  .lg-cell-bar,
-  .lg-table th.lg-cell-bar {
+@container rg (max-width: 520px) {
+  .rg-cell-bar,
+  .rg-table th.rg-cell-bar {
     display: none;
   }
 
-  .lg-cell-label {
+  .rg-cell-label {
     width: 46%;
   }
 
-  .lg-cell-unit {
+  .rg-cell-unit {
     width: 44%;
   }
 }

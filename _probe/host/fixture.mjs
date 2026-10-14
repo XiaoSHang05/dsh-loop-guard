@@ -25,7 +25,7 @@ export function mount(config = {}) {
   }
   async function request(method, action, body) {
     const req = new EventEmitter(), res = new EventEmitter()
-    req.method = method; req.url = '/dsh-loop-guard/api/' + action
+    req.method = method; req.url = '/dsh-rice-guard/api/' + action
     res.text = ''; res.writeHead = (status, headers) => {res.status = status; res.headers = headers}
     res.write = text => {res.text += text; return true}; res.end = text => {if (text) res.write(text); res.ended = true}
     const pending = routes.get(req.url).handler(req, res)

@@ -1,8 +1,8 @@
-# 循环守卫 · dsh-loop-guard
+# 米饭守卫 · dsh-rice-guard
 
-[![ci](https://github.com/XiaoSHang05/dsh-loop-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/XiaoSHang05/dsh-loop-guard/actions/workflows/ci.yml)
-[![release](https://img.shields.io/github/v/release/XiaoSHang05/dsh-loop-guard)](https://github.com/XiaoSHang05/dsh-loop-guard/releases/latest)
-[![license](https://img.shields.io/github/license/XiaoSHang05/dsh-loop-guard)](https://github.com/XiaoSHang05/dsh-loop-guard/blob/main/LICENSE)
+[![ci](https://github.com/XiaoSHang05/dsh-rice-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/XiaoSHang05/dsh-rice-guard/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/XiaoSHang05/dsh-rice-guard)](https://github.com/XiaoSHang05/dsh-rice-guard/releases/latest)
+[![license](https://img.shields.io/github/license/XiaoSHang05/dsh-rice-guard)](https://github.com/XiaoSHang05/dsh-rice-guard/blob/main/LICENSE)
 
 ### 🐋 还在担心你的大鲸鱼偷吃你的米饭吗？
 
@@ -20,7 +20,7 @@
 | 🧂 **还能自己加料** | 你最怕它复读哪句，自己填进去，它就替你盯着那句 |
 
 > 「大鲸鱼：我还能再吃一口。」
-> 「循环守卫：不，你不能。」
+> 「米饭守卫：不，你不能。」
 
 ---
 
@@ -39,7 +39,7 @@ dsh plugin --profile desktop add "link:$($PWD.Path)"
 从 GitHub 安装（无需先克隆）：
 
 ```powershell
-dsh plugin --profile desktop add "github:XiaoSHang05/dsh-loop-guard"
+dsh plugin --profile desktop add "github:XiaoSHang05/dsh-rice-guard"
 ```
 
 **安装或更新宿主代码后重启 DSH**，然后刷新原来的网页。对话区会出现「监控」标签页。报警挂在全局浮层，无需一直停留在监控页。已安装过旧目录时，请先在插件管理器里处理旧链接，再装交付目录，避免两个目录的同名插件混用。
@@ -76,7 +76,7 @@ dsh plugin --profile desktop add "github:XiaoSHang05/dsh-loop-guard"
 
 ```js
 agent.cancel(
-  { kind: 'hook', reason: 'loop-guard: repeated output' },
+  { kind: 'hook', reason: 'rice-guard: repeated output' },
   { keepInbox: true },
 )
 ```
@@ -110,13 +110,13 @@ agent.cancel(
 - `src/index.js`：宿主半，包含流订阅、配置、命中记录、取消与 HTTP/SSE。
 - `src/client.js`、`src/client.css`：监控页与报警。
 - `lib/client.js`：已构建的浏览器模块，无需再构建即可安装。
-- `cordis.patch.yml`：安装条目，id 为 `loop-guard`。
+- `cordis.patch.yml`：安装条目，id 为 `rice-guard`。
 - `CONTRACT.md`：跨半数据契约。
 - `VALIDATION.md`：交付验证记录与证据边界。
 - `scripts/`：构建、检查、测试与独立交付目录打包。
 - `_probe/`：测试台与语料探针（离线，不随插件运行）。
 
-读写接口位于 `/dsh-loop-guard/api/`：`health`、`state`、`config`、`monitor`、`hits`、`events`。SSE 只通知重新读取，状态以 GET state 为准；连接异常时退回轮询。接口使用宿主 Web 的认证边界，不额外提供公网认证。
+读写接口位于 `/dsh-rice-guard/api/`：`health`、`state`、`config`、`monitor`、`hits`、`events`。SSE 只通知重新读取，状态以 GET state 为准；连接异常时退回轮询。接口使用宿主 Web 的认证边界，不额外提供公网认证。
 
 ## 开发与测试（完整源码目录）
 

@@ -28,7 +28,7 @@
 import { readFileSync } from 'node:fs'
 
 const BUNDLE = new URL('../../lib/client.js', import.meta.url)
-const API_PREFIX = '/dsh-loop-guard/api/'
+const API_PREFIX = '/dsh-rice-guard/api/'
 
 let source
 try {

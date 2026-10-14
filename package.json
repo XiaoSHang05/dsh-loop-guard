@@ -39,12 +39,15 @@
     "lib",
     "src",
     "cordis.patch.yml",
+    "screenshots.json",
+    "docs/images",
     "README.md",
     "LICENSE",
     "CONTRACT.md",
     "VALIDATION.md",
     "CHANGELOG.md",
-    "CONTRIBUTING.md"
+    "CONTRIBUTING.md",
+    "SECURITY.md"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",

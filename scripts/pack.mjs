@@ -11,6 +11,7 @@ try {await lstat(out);throw new Error('destination already exists: '+out)} catch
 const files=[
   'package.json','package-lock.json','cordis.patch.yml','.gitattributes',
   'README.md','LICENSE','CONTRACT.md','VALIDATION.md','CHANGELOG.md','CONTRIBUTING.md','SECURITY.md',
+  'screenshots.json','docs/images/alarm-test.png','docs/images/monitor.png',
   'src/index.js','src/detect.js','src/client.js','src/client.css','lib/client.js',
   'scripts/build-client.mjs','scripts/check.mjs','scripts/test.mjs','scripts/pack.mjs',
   '_probe/detect.mjs','_probe/mutation.mjs','_probe/env.mjs','_probe/history-scan.mjs',
